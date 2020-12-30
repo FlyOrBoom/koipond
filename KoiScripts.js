@@ -226,7 +226,7 @@ float hash(float p)
     p *= p + p;
     return fract(p);
 }
-float hash(vec2 p)
+highp float hash(highp vec2 p)
 {
     vec3 p3 = fract(vec3(p.xyx) * .1031);
     p3 += dot(p3, p3.yzx + 33.33);
@@ -262,10 +262,10 @@ float fractal(vec2 p)
 }
 float skin(vec2 p, float style)
 {
-    return pow(
+    return round(pow(
         cos(fractal(p)/2.),
         50.*ceil(style*6.) // Variation in darkness
-    );
+    ));
 
 }
 //-- DISTANCE FUNCTIONS
@@ -355,47 +355,27 @@ vec3 colKoi(vec2 p, float d, int id)
     
     //-- MARBLE COLORS
     vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
-    vec3 col = vec3(
-        skin(q+2.,style),
-        skin(q+3.,style),
-        skin(q+4.,style)
-    );
-
-    if(style>.8){
-        col.r = sqrt(col.g) + col.b;
-        col.g *= .3;
-        col.b = .0;
-    }else if(style>.6){
-        col.b = col.r*col.b;
-        col.g = col.b;
-    }else if(style>.4){
-        col.r = 1.;
-        col.g = min(col.g,col.r);
-        col.b = col.g*.5;
-    }else{
-        col.b *= col.r*col.g;
-        col.g *= col.b;
-        col.r *= col.g;
-    }
+    vec3 col = vec3(1.,vec2(skin(q+3.,style)));
+        
+    float h = min(-2.*d,1.); // "height" of koi
     
-    float h = -min(d,0.); // "height" of koi
-
-    return col*pow(h,.6);
+    return col;//*pow(h,.6);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     vec3 col = vec3(0);
-    float vignette = 1.-length(uv);
+    float vignette = 1.;//-length(uv);
     
     if(vignette > 0.){
     
-        col = vec3(.0,.04,.03); // color
+        col = vec3(.4); // color
         float ripples = sdRipple(uv);
         uv += ripples/50.;
 
-        col *= 1.+fractal(uv*5.);
+        //col *= 1.+round(fractal(uv*5.)*2.)/2.;
+        col *= 2.;
         
         float shadow = 0.;
 
@@ -415,9 +395,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
             float d = sdKoi(p); // exact bounds
 
-            if(d<0.){
-                col *= .2;
+            if(d<0.1){
+                col *= 0.;
                 col += colKoi(p, d, id);
+                if(d>0.) col *= 0.;
                 break;
             }
             
@@ -429,7 +410,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             );
         }
         
-        col *= 1.+2.*shadow;
+        col *= 1.+.5*shadow;
         //col *= 1.+ripples/3.;
         col *= vignette;
         
