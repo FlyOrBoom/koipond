@@ -1,5 +1,3 @@
-"use strict"
-
 const canvas = document.querySelector("canvas")
 const timeSamples = Array(32)
 const debug = document.querySelector("div")
@@ -14,7 +12,7 @@ const vertexShaderCode = `
 `
 
 const fragmentShaderCode = `
-    precision mediump float;
+    precision highp float;
     uniform vec2 iResolution;
     uniform float iTime;
     uniform vec4 kois[${pond.MAX_POPULATION}];
