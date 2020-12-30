@@ -236,7 +236,7 @@ float hash12(vec2 p)
 }
 vec2 hash22(vec2 p)
 {
-    vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
     p3 += dot(p3, p3.yzx+33.33);
     return fract((p3.xx+p3.yz)*p3.zy);
 
@@ -249,13 +249,13 @@ vec4 hash42(vec2 p)
 }
 vec3 hash31(float p)
 {
-    vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xxy+p3.yzz)*p3.zyx);
+   vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
+   p3 += dot(p3, p3.yzx+33.33);
+   return fract((p3.xxy+p3.yzz)*p3.zyx); 
 }
 vec3 hash32(vec2 p)
 {
-    vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
     p3 += dot(p3, p3.yxz+33.33);
     return fract((p3.xxy+p3.yzz)*p3.zyx);
 }
@@ -265,13 +265,13 @@ float value( vec2 p )
 {
     vec2 i = floor( p );
     vec2 f = fract( p );
+	
+	vec2 u = f*f*(3.0-2.0*f);
 
-    vec2 u = f*f*(3.0-2.0*f);
-
-    return mix( mix( hash12( i + vec2(0.0,0.0) ),
-    hash12( i + vec2(1.0,0.0) ), u.x),
-    mix( hash12( i + vec2(0.0,1.0) ),
-    hash12( i + vec2(1.0,1.0) ), u.x), u.y);
+    return mix( mix( hash12( i + vec2(0.0,0.0) ), 
+                     hash12( i + vec2(1.0,0.0) ), u.x),
+                mix( hash12( i + vec2(0.0,1.0) ), 
+                     hash12( i + vec2(1.0,1.0) ), u.x), u.y);
 }
 float fractal( vec2 p )
 {
@@ -287,8 +287,8 @@ float fractal( vec2 p )
 float skin(vec2 p, float style)
 {
     float s = pow(
-    cos(fractal(p)/2.),
-    25.*ceil(style*6.) // Variation in darkness
+        cos(fractal(p)/2.),
+        25.*ceil(style*6.) // Variation in darkness
     );
     return s*s;
 
@@ -378,16 +378,16 @@ vec4 colKoi( vec2 p, float d, int id )
 {
     //-- koi STATS
     float style = hash11(float(100*id+SEED));
-
+    
     float h = -min(d,0.); // "height" of koi
 
     //-- MARBLE COLORS
     vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
     vec4 col = vec4(
-    skin(q+2.,style),
-    skin(q+3.,style),
-    skin(q+4.,style),
-    1
+        skin(q+2.,style),
+        skin(q+3.,style),
+        skin(q+4.,style),
+        1
     );
 
     if(style>.8){
@@ -414,58 +414,69 @@ vec4 colKoi( vec2 p, float d, int id )
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates
+    vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     vec3 col = vec3(0);
     float vignette = 1.-length(uv);
-
+    
     if(vignette > 0.){
-
+    
         col = vec3(.0,.05,.04); // color
         float ripples = sdRipple(uv);
         uv += ripples/50.;
 
         col *= 1.+fractal(uv*5.);
+        
+        float shadow = 0.;
 
-        for(int id=0; id<MAX_POPULATION; id++)
+        for(int id=0; id<MAX_POPULATION; id++) // front to back
         {
             if(id==population) break;
 
             vec3 koi = kois[id].xyz;
 
             if(length(uv+koi.xy)>MAX_KOI_SIZE) continue; // bounding circle
-
+            
             //col += .5;
 
             vec2 p = ( uv + koi.xy ) * rot(koi.z);
 
             p.x+=sin(iTime+p.y*3.+float(id))*.1*p.y; // warp swimming
 
-            float shadow = sdEllipseBound(p-uv/4.,vec2(MAX_KOI_SIZE*.3,MAX_KOI_SIZE*.8));
-
-            if(shadow<0.) col *= 1.+shadow*2.;
-
             float d = sdKoi(p); // exact bounds
 
-            if(d>0.) continue;
+            if(d>0.){
+            
+                shadow = min(shadow,
+                    sdEllipseBound(
+                        p-uv/8., // more abberation near the edges
+                        MAX_KOI_SIZE*vec2(.3,.8)
+                    )
+                );
+
+                continue;
+            }
 
             vec4 koiCol = colKoi(p, d, id);
 
-            col *= 1.-pow(koiCol.w,.5); // semi-occlude the koi below
-            col += koiCol.rgb*koiCol.w;
+            col = koiCol.rgb*koiCol.w;
+            
+            break;
         }
+        
+        
+        col *= 1.+2.*shadow;
 
         //col *= 1.+ripples/3.;
         col *= vignette;
-
+        
 
         // Output to screen
         col = gamma(col);
-
+    
     }
-
+    
     fragColor = vec4(col,1);
 }
-
     // END
 
     void main() {
