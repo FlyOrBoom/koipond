@@ -10,18 +10,16 @@
  */
 
 //-- UTILS
-float smin( float a, float b, float k )
+float smin(float a, float b, float k)
 {
     float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
     return mix( b, a, h ) - k*h*(1.0-h);
 }
-mat2 rot(float theta){
-    float co = cos(theta);
-    float si = sin(theta);
-    return mat2(co,-si,si,co);
-}
-float bias(float x, float b) {
-    return  x/((1./b-2.)*(1.-x)+1.);
+mat2 rot(float theta)
+{
+    float x = cos(theta);
+    float y = sin(theta);
+    return mat2(x,-y,y,x);
 }
 vec3 gamma(vec3 c)
 {
@@ -29,76 +27,53 @@ vec3 gamma(vec3 c)
 }
 
 //-- HASH
-float hash11(float p)
+float hash(float p)
 {
     p = fract(p * .1031);
     p *= p + 33.33;
     p *= p + p;
     return fract(p);
 }
-float hash12(vec2 p)
+float hash(vec2 p)
 {
-    vec3 p3  = fract(vec3(p.xyx) * .1031);
+    vec3 p3 = fract(vec3(p.xyx) * .1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
 }
-vec2 hash22(vec2 p)
-{
-	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xx+p3.yz)*p3.zy);
-
-}
-vec4 hash42(vec2 p)
-{
-    vec4 p4 = fract(vec4(p.xyxy) * vec4(.1031, .1030, .0973, .1099));
-    p4 += dot(p4, p4.wzxy+33.33);
-    return fract((p4.xxyz+p4.yzzw)*p4.zywx);
-}
-vec3 hash31(float p)
-{
-   vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
-   p3 += dot(p3, p3.yzx+33.33);
-   return fract((p3.xxy+p3.yzz)*p3.zyx); 
-}
-vec3 hash32(vec2 p)
-{
-	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yxz+33.33);
-    return fract((p3.xxy+p3.yzz)*p3.zyx);
-}
 
 //-- NOISE
-float value( vec2 p )
+float value(vec2 p)
 {
-    vec2 i = floor( p );
-    vec2 f = fract( p );
+    vec2 i = floor(p);
+    vec2 f = fract(p);
 	
-	vec2 u = f*f*(3.0-2.0*f);
+	vec2 u = f*f*(3.-2.*f);
 
-    return mix( mix( hash12( i + vec2(0.0,0.0) ), 
-                     hash12( i + vec2(1.0,0.0) ), u.x),
-                mix( hash12( i + vec2(0.0,1.0) ), 
-                     hash12( i + vec2(1.0,1.0) ), u.x), u.y);
+    return mix( mix(hash(i+vec2(0,0)),
+                    hash(i+vec2(1,0)),
+                    u.x),
+                    
+                mix(hash(i+vec2(0,1)),
+                    hash(i+vec2(1,1)),
+                    u.x),
+                    
+                u.y) - 0.5;
 }
-float fractal( vec2 p )
+float fractal(vec2 p)
 {
-    mat2 m = mat2(.8,.6,-.6,.8);
-    float f = 0.;
-    f += 0.5000*(-1.0+2.0*value(p)); p *= m*2.02;
-    f += 0.2500*(-1.0+2.0*value(p)); p *= m*2.03;
-    f += 0.1250*(-1.0+2.0*value(p)); p *= m*2.01;
-    f += 0.0625*(-1.0+2.0*value(p));
-
-    return f/0.9375;
+    return
+      value(p)
+    + value(p*2.)/2.
+    + value(p*4.)/4.
+    + value(p*8.)/8.
+    ;
 }
 float skin(vec2 p, float style)
 {
-    float s = pow(
+    return pow(
         cos(fractal(p)/2.),
-        25.*ceil(style*6.) // Variation in darkness
+        50.*ceil(style*6.) // Variation in darkness
     );
-    return s*s;
 
 }
 //-- DISTANCE FUNCTIONS
@@ -114,9 +89,9 @@ float sdEllipseBound(vec2 p, vec2 r) // Bound
 float sdEllipseApprox(vec2 p, vec2 r) // Bound + smoothly connects with other SDFs
 {
     return mix(
-    sdEllipseBound(p,r),
-    abs(p.x)-r.x,
-    max(0.,r.y-abs(p.y))/r.y
+        sdEllipseBound(p,r),
+        abs(p.x)-r.x,
+        max(0.,r.y-abs(p.y))/r.y
     );
 }
 
@@ -133,8 +108,8 @@ float sdGinko(vec2 p, float r, float m)
 float sdCrescent(vec2 p, float r)
 {
     return max(
-    sdCircle(vec2(abs(p.x)-r/2.,p.y),r),
-    -sdCircle(vec2(abs(p.x)-r/2.,p.y-r/1.9),r)
+        sdCircle(vec2(abs(p.x)-r/2.,p.y),r),
+        -sdCircle(vec2(abs(p.x)-r/2.,p.y-r/1.9),r)
     );
 }
 float sdPolygon(vec2 p, float vertices, float radius)
@@ -182,20 +157,16 @@ float sdRipple(vec2 p)
 }
 
 //-- KOI
-vec4 colKoi( vec2 p, float d, int id )
+vec3 colKoi(vec2 p, float d, int id)
 {
-    //-- koi STATS
-    float style = hash11(float(100*id+SEED));
+    float style = hash(float(100*id+SEED));
     
-    float h = -min(d,0.); // "height" of koi
-
     //-- MARBLE COLORS
     vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
-    vec4 col = vec4(
+    vec3 col = vec3(
         skin(q+2.,style),
         skin(q+3.,style),
-        skin(q+4.,style),
-        1
+        skin(q+4.,style)
     );
 
     if(style>.8){
@@ -214,10 +185,10 @@ vec4 colKoi( vec2 p, float d, int id )
         col.g *= col.b;
         col.r *= col.g;
     }
-    col.a = pow(h,.6);
+    
+    float h = -min(d,0.); // "height" of koi
 
-
-    return col;
+    return col*pow(h,.6);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -228,7 +199,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     if(vignette > 0.){
     
-        col = vec3(.0,.05,.04); // color
+        col = vec3(.0,.04,.03); // color
         float ripples = sdRipple(uv);
         uv += ripples/50.;
 
@@ -246,42 +217,31 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             
             //col += .5;
 
-            vec2 p = ( uv + koi.xy ) * rot(koi.z);
+            vec2 p = (uv+koi.xy)*rot(koi.z);
 
             p.x+=sin(iTime+p.y*3.+float(id))*.1*p.y; // warp swimming
 
             float d = sdKoi(p); // exact bounds
 
-            if(d>0.){
-            
-                shadow = min(shadow,
-                    sdEllipseBound(
-                        p-uv/8., // more abberation near the edges
-                        MAX_KOI_SIZE*vec2(.3,.8)
-                    )
-                );
-
-                continue;
+            if(d<0.){
+                col *= .2;
+                col += colKoi(p, d, id);
+                break;
             }
-
-            vec4 koiCol = colKoi(p, d, id);
-
-            col = koiCol.rgb*koiCol.w;
             
-            break;
+            shadow = min(shadow,
+                sdEllipseBound(
+                    p-uv/8., // more abberation near the edges
+                    MAX_KOI_SIZE*vec2(.3,.8)
+                )
+            );
         }
         
-        
         col *= 1.+2.*shadow;
-
         //col *= 1.+ripples/3.;
         col *= vignette;
         
-
-        // Output to screen
         col = gamma(col);
-    
     }
-    
     fragColor = vec4(col,1);
 }
