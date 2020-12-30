@@ -1,11 +1,13 @@
-// Koi Pond by Xing Liu (MIT License, 2020)
-// [WIP]
-//
-// Includes code by...
-// - Dave Hoskins: Hash without Sine (https://www.shadertoy.com/view/4djSRW)
-// - Inigo Quilez: 2D SDFs (https://www.iquilezles.org/www/articles/distfunctions2d/distfunctions2d.htm)
-// - Basmanov Daniil: Regular polygon SDF (https://www.shadertoy.com/view/MtScRG)
-//
+/* 
+ * Koi Pond by Xing Liu (MIT License, 2020)
+ * [WIP]
+ *
+ * Includes code by...
+ * - Dave Hoskins: Hash without Sine (https://www.shadertoy.com/view/4djSRW)
+ * - Inigo Quilez: 2D SDFs (https://www.iquilezles.org/www/articles/distfunctions2d/distfunctions2d.htm)
+ * - Basmanov Daniil: Regular polygon SDF (https://www.shadertoy.com/view/MtScRG)
+ *
+ */
 
 //-- UTILS
 float smin( float a, float b, float k )
