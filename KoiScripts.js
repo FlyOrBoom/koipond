@@ -520,7 +520,7 @@ function start () {
 start()
 
 function resize () {
-    resizeCanvasToDisplaySize(gl.canvas, 1)
+    resizeCanvasToDisplaySize(gl.canvas, 0.5) // Half resolution sampling
 }
 window.addEventListener('resize',resize)
 resize()
