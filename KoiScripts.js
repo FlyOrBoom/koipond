@@ -175,7 +175,7 @@ const vertexShaderCode = `
 `
 
 const fragmentShaderCode = `
-    precision highp float;
+    precision lowp float;
     uniform vec2 iResolution;
     uniform float iTime;
     uniform vec4 kois[${pond.MAX_POPULATION}];
