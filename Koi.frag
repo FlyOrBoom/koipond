@@ -61,7 +61,7 @@ float value(vec2 p)
 }
 float skin(vec2 p, float style)
 {
-    return round(pow(
+    return floor(0.5+pow(
         cos(value(p)/2.),
         50.*ceil(style*6.) // Variation in darkness
     ));
@@ -207,7 +207,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float ripples = sdRipple(uv);
     uv += ripples/50.;
 
-    //col *= 1.+round(fractal(uv*5.)*2.)/2.;
     col *= 2.;
 
     float shadow = 0.;
