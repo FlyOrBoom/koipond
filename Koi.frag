@@ -21,10 +21,6 @@ mat2 rot(float theta)
     float y = sin(theta);
     return mat2(x,-y,y,x);
 }
-vec3 gamma(vec3 c)
-{
-    return pow(c,vec3(1./1.6));
-}
 
 //-- HASH
 float hash(float p)
@@ -73,66 +69,24 @@ float sdCircle( vec2 p, float r )
     return length(p) - r;
 }
 
-
-float sdEllipse(vec2 p, vec2 ab)
-{
-	p = abs(p); if( ab.x > ab.y ){ p=p.yx; ab=ab.yx; }
-	
-	float l = ab.y*ab.y - ab.x*ab.x;
-	
-    float m = ab.x*p.x/l; 
-	float n = ab.y*p.y/l; 
-	float m2 = m*m;
-	float n2 = n*n;
-	
-    float c = (m2 + n2 - 1.0)/3.0; 
-	float c3 = c*c*c;
-
-    float q = c3 + m2*n2*2.0;
-    float d = c3 + m2*n2;
-    float g = m + m*n2;
-
-    float co;
-
-    if( d<0.0 )
-    {
-        float h = acos(q/c3)/3.0;
-        float s = cos(h);
-        float t = sin(h)*sqrt(3.0);
-        float rx = sqrt( -c*(s + t + 2.0) + m2 );
-        float ry = sqrt( -c*(s - t + 2.0) + m2 );
-        co = ( ry + sign(l)*rx + abs(g)/(rx*ry) - m)/2.0;
-    }
-    else
-    {
-        float h = 2.0*m*n*sqrt(d);
-        float s = sign(q+h)*pow( abs(q+h), 1.0/3.0 );
-        float u = sign(q-h)*pow( abs(q-h), 1.0/3.0 );
-        float rx = -s - u - c*4.0 + 2.0*m2;
-        float ry = (s - u)*sqrt(3.0);
-        float rm = sqrt( rx*rx + ry*ry );
-        co = (ry/sqrt(rm-rx) + 2.0*g/rm - m)/2.0;
-    }
-
-    float si = sqrt( max(1.0-co*co,0.0) );
- 
-    vec2 r = ab * vec2(co,si);
-	
-    return length(r-p) * sign(p.y-r.y);
-}
 float sdEllipseBound(vec2 p, vec2 r) // Bound
 {
     return sdCircle(p*vec2(r.y/r.x,1),r.y);
 }
-
+float sdEllipseApprox(vec2 p, vec2 r) 
+{
+    float k0 = length(p/r);
+    float k1 = length(p/(r*r));
+    return k0*(k0-1.0)/k1;
+}
 float sdVesica(vec2 p, float r, float d)
 {
     return length(abs(p)-vec2(-d,0))-r;
 }
 float sdGinko(vec2 p, float r, float m)
 {
-    float bias = .7+(sign(p.x)*sin(iTime*2.))/2.;
-    float cut = sdEllipse(vec2(abs(p.x),-p.y)-r,vec2(r,r*m/bias));
+    float bias = (sign(p.x)*sin(iTime*8.))*.3+1.;
+    float cut = sdCircle(vec2(abs(p.x)-r*bias,-p.y),r*bias);
     return max(sdCircle(p,r),-cut);
 }
 float sdCrescent(vec2 p, float r)
@@ -166,37 +120,60 @@ float sdKoi(vec2 p)
     float r =    0.10*MAX_KOI_SIZE; // length of koi's semi-minor axis
     float head = 0.25*MAX_KOI_SIZE;
     float body = 0.50*MAX_KOI_SIZE;
-    float tail = 0.20*MAX_KOI_SIZE;
+    float tail = 0.30*MAX_KOI_SIZE;
     float fins = 0.10*MAX_KOI_SIZE;
 
-    if(p.y < -0.01 ) { // if pixel is at the head
-        d = sdEllipse(p,vec2(r,head));
-    } else {
+    if(p.y < 0. ) { // if pixel is at the head
+        d = sdEllipseApprox(p,vec2(r,head));
+    } else if(p.y>body){
+        d = sdGinko(p-vec2(0,body),tail,2.5);
+    }else {
         float vesica_r = (body*body/r+r)/2.; //radii of the two circles that intersect to form a body-high vesica
         d = sdVesica(p,vesica_r,vesica_r-r);
     }
-    d = smin(d,sdGinko(p-vec2(0,body),tail,2.5),0.05);
     d = min(d,sdCrescent(p,fins));
     d /= r;
     return d;
 }
-float sdRipple(vec2 p)
+float sdRipple(vec2 uv)
 {
-    return value(p+iTime);
+    float h = 0.;
+    float div = .5;
+    vec2 p = vec2(-1.);
+    for (; p.x<1.; p.x+=div)
+    {
+        for (p.y=-1.; p.y<1.; p.y+=div)
+        {
+            vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
+            
+            float radius = length(uv-p-displacement);
+
+            float n = iTime-length(displacement)*5.;
+            float frequency = radius*80.;
+            
+            float wave = sin(frequency-(TAU*n));
+
+            h += wave;	
+
+        }
+    }
+    return h;
 }
 
 //-- KOI
 vec3 colKoi(vec2 p, float d, int id)
 {
-    float style = hash(float(100*id+SEED));
-    
-    //-- MARBLE COLORS
-    vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
-    vec3 col = vec3(1.,vec2(skin(q+3.,style)));
+    vec3 outline = vec3(0);
+    if(d>0.) return outline;
         
-    float h = min(-2.*d,1.); // "height" of koi
+    float style = hash(float(100*id+SEED));
+    vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
+    float mask = skin(q+3.,style);
     
-    return col;//*pow(h,.6);
+    if(style>.8) return mask*vec3(0,.5,1);
+    if(style>.6) return mask+vec3(1,0,0);
+    if(style>.4) return mask+vec3(1,.5,0);
+    return mask*vec3(1.,.5,.5)+vec3(1,.3,0);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -205,7 +182,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 col = vec3(0);
     
     float ripples = sdRipple(uv);
-    uv += ripples/50.;
+    
+    uv+=ripples/800.;
 
     col *= 2.;
 
@@ -230,10 +208,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         float d = sdKoi(p); // exact bounds
 
-        if(d<0.2){ // black outline
-            if(d<0.){ // koi color
-                col = colKoi(p, d, id);
-            }
+        if(d<.2){
+            col = colKoi(p, d, id);
             break;
         }
 
@@ -246,8 +222,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
 
     col *= 1.+.5*shadow*shadow*shadow;
-    //col *= 1.+ripples/3.;
+    //col += ripples;
 
-    col = gamma(col);
     fragColor = vec4(col,1);
 }
