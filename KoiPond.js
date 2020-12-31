@@ -22,8 +22,8 @@ class KoiPond {
             x -= Math.cos(theta+Math.PI/2)/50
             y += Math.sin(theta+Math.PI/2)/50
             
-            this.kois[ID+0] = mod(x,1)
-            this.kois[ID+1] = mod(y,1)
+            this.kois[ID+0] = torus(x,1)
+            this.kois[ID+1] = torus(y,1)
             this.kois[ID+2] = mod(theta,2*Math.PI)
             this.kois[ID+3] = style
         }
@@ -31,6 +31,9 @@ class KoiPond {
 }
 function mod(a,b){
     return a-b*Math.floor(a/b)
+}
+function torus(a,b){
+    return mod(a-b,2*b)-1
 }
 function noise(x){
     let y = 0
