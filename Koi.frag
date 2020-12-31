@@ -139,12 +139,12 @@ float sdRipple(vec2 uv)
 {
     float h = 0.;
     float div = .5;
-    vec2 p = vec2(-1.);
-    for (; p.x<1.; p.x+=div)
+    for (float x = -1.; x<1.; x += RIPPLE_DIV)
     {
-        for (p.y=-1.; p.y<1.; p.y+=div)
+        for (float y = -1.; y<1.; y += RIPPLE_DIV)
         {
-            vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
+	    vec2 p = vec2(x,y);
+	    vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
             
             float radius = length(uv-p-displacement);
 
