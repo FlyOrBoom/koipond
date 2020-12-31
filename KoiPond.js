@@ -14,8 +14,10 @@ class KoiPond {
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }
     update (time, delta) {
-        for (let i = 0; i < this.MAX_POPULATION; i+= this.ATTRIBUTES_PER_KOI) {
+        for (let i = 0; i < this.population; i++) {
+
             const ID = i*this.ATTRIBUTES_PER_KOI
+	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
 	    theta = noise(time/100)
 	    
