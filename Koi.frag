@@ -138,13 +138,12 @@ float sdKoi(vec2 p)
 float sdRipple(vec2 uv)
 {
     float h = 0.;
-    float div = .5;
-    for (float x = -1.; x<1.; x += RIPPLE_DIV)
+    for (float x = -1.; x<1.; x ++)
     {
-        for (float y = -1.; y<1.; y += RIPPLE_DIV)
+        for (float y = -1.; y<1.; y ++)
         {
-	    vec2 p = vec2(x,y);
-	    vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
+            vec2 p = vec2(x,y);
+            vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
             
             float radius = length(uv-p-displacement);
 
@@ -154,7 +153,6 @@ float sdRipple(vec2 uv)
             float wave = sin(frequency-(TAU*n));
 
             h += wave;	
-
         }
     }
     return h;
@@ -162,16 +160,11 @@ float sdRipple(vec2 uv)
 
 //-- KOI
 vec3 colKoi(vec2 p, float d, int id)
-{
-    vec3 outline = vec3(0);
-    if(d>0.) return outline;
-        
+{        
     float style = hash(float(100*id+SEED));
     vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
     float mask = skin(q+3.,style);
-    
-    if(sdCircle(vec2(abs(p.x)-.05,p.y+.11)-vec2(0.,0.),.02)<0.) return vec3(0); // eyeballs
-    
+        
     vec3 col = vec3(mask);
     
     if(style>.8) {
@@ -184,11 +177,11 @@ vec3 colKoi(vec2 p, float d, int id)
         col *= vec3(1.,.5,.5); col += vec3(1,.3,0);
     }
     
-    float h = -min(d,0.); // "height" of koi
+    float h = clamp(-d,0.,1.); // "height" of koi
     
     col = clamp(col,0.,1.);
     
-    if(p.x>0.) col *= .8;
+    col *= ceil(3.*h)/12.+.75;
     
     return col;
 }
@@ -204,12 +197,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     col *= 2.;
 
-    float shadow = 0.;
+    bool shadow = false;
 
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
         if(id==population) { // background color if no fish found
-            col = vec3(0.8);
+            col = vec3(.5,.6,.5);
             break;
         }
 
@@ -222,25 +215,25 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         //col += .5;
 
         vec2 p = koi.xy*rot(koi.z);
+        
+        if(sdCircle(vec2(abs(p.x)-.05,p.y+.1)-vec2(0.,0.),.02)<0.) { // eyeballs
+            col = vec3(0);
+            break;
+        }
 
         p.x+=sin(iTime+p.y*3.+float(id))*.1*p.y; // warp swimming
 
         float d = sdKoi(p); // exact bounds
 
-        if(d<.2){
+        if(d<0.){
             col = colKoi(p, d, id);
             break;
         }
 
-        shadow = min(shadow,
-            sdEllipseBound(
-                p-uv/8., // more abberation near the edges
-                MAX_KOI_SIZE*vec2(.3,.8)
-            )
-        );
+        if(sdKoi(p-uv/8.)<0.) shadow = true;
     }
 
-    col *= 1.+.5*shadow*shadow*shadow;
+    if(shadow) col *= .9;
 
     fragColor = vec4(col,1);
 }
