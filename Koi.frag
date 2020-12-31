@@ -149,7 +149,7 @@ float sdRipple(vec2 uv)
             float radius = length(uv-p-displacement);
 
             float n = iTime-length(displacement)*5.;
-            float frequency = radius*80.;
+            float frequency = radius*50.;
             
             float wave = sin(frequency-(TAU*n));
 
@@ -200,7 +200,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float ripples = sdRipple(uv);
     
-    //uv+=ripples/800.;
+    uv+=ripples/800.;
 
     col *= 2.;
 
@@ -241,7 +241,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
 
     col *= 1.+.5*shadow*shadow*shadow;
-    //col += ripples;
 
     fragColor = vec4(col,1);
 }
