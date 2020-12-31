@@ -189,9 +189,7 @@ vec3 colKoi(vec2 p, float d, int id)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
-    vec3 col = vec3(0);
-        
-    col *= 2.;
+    vec3 col = vec3(.5,.6,.5); // background color
 
     bool shadow = false;
     
@@ -199,11 +197,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
-        if(id==population)  // background color if no fish found
-        {
-            col = vec3(.5,.6,.5);
-            break;
-        }
+        if(id==population) break;
 
         vec3 koi = kois[id].xyz;
         vec2 p = koi.xy;
