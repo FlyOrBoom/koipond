@@ -314,11 +314,11 @@ float sdKoi(vec2 p)
 {
     float d = 1.;
 
-    float r =    0.10*MAX_KOI_SIZE; // length of koi's semi-minor axis
-    float head = 0.25*MAX_KOI_SIZE;
+    float r =    0.15*MAX_KOI_SIZE; // length of koi's semi-minor axis
+    float head = 0.30*MAX_KOI_SIZE;
     float body = 0.50*MAX_KOI_SIZE;
     float tail = 0.30*MAX_KOI_SIZE;
-    float fins = 0.10*MAX_KOI_SIZE;
+    float fins = 0.13*MAX_KOI_SIZE;
 
     if(p.y < 0. ) { // if pixel is at the head
         d = sdEllipseApprox(p,vec2(r,head));
@@ -335,11 +335,12 @@ float sdKoi(vec2 p)
 float sdRipple(vec2 uv)
 {
     float h = 0.;
-    for (float x = -1.; x<1.; x+=RIPPLE_DIVS)
+    float div = .5;
+    vec2 p = vec2(-1.);
+    for (; p.x<1.; p.x+=div)
     {
-        for (float y=-1.; y<1.; y+=RIPPLE_DIVS)
+        for (p.y=-1.; p.y<1.; p.y+=div)
         {
-	    vec2 p = vec2(x,y);
             vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
             
             float radius = length(uv-p-displacement);
@@ -366,6 +367,8 @@ vec3 colKoi(vec2 p, float d, int id)
     vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
     float mask = skin(q+3.,style);
     
+    if(sdCircle(vec2(abs(p.x)-.05,p.y+.11)-vec2(0.,0.),.02)<0.) return vec3(0); // eyeballs
+    
     if(style>.8) return mask*vec3(0,.5,1);
     if(style>.6) return mask+vec3(1,0,0);
     if(style>.4) return mask+vec3(1,.5,0);
@@ -379,7 +382,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float ripples = sdRipple(uv);
     
-    uv+=ripples/800.;
+    //uv+=ripples/800.;
 
     col *= 2.;
 
