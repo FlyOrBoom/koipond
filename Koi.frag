@@ -123,9 +123,9 @@ float sdKoi(vec2 p)
     float tail = 0.30*MAX_KOI_SIZE;
     float fins = 0.13*MAX_KOI_SIZE;
 
-    if(p.y < 0. ) { // if pixel is at the head
+    if(p.y < 0. ) { // if pixel in head
         d = sdEllipseApprox(p,vec2(r,head));
-    } else if(p.y>body){
+    } else if(p.y>body){ // if pixel in tail
         d = sdGinko(p-vec2(0,body),tail,2.5);
     }else {
         float vesica_r = (body*body/r+r)/2.; //radii of the two circles that intersect to form a body-high vesica
@@ -190,31 +190,32 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     vec3 col = vec3(0);
-    
-    float ripples = sdRipple(uv);
-    
-    uv+=ripples/800.;
-
+        
     col *= 2.;
 
     bool shadow = false;
+    
+    float ripple = 0.;
 
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
-        if(id==population) { // background color if no fish found
+        if(id==population)  // background color if no fish found
+        {
             col = vec3(.5,.6,.5);
             break;
         }
 
         vec3 koi = kois[id].xyz;
-        koi.xy += uv;
-        koi.xy = mod(koi.xy-1.,2.)-1.; // tile
+        vec2 p = koi.xy;
+        p += uv;
+        p = mod(p-1.,2.)-1.; // tile
         
-        if(length(koi.xy)>MAX_KOI_SIZE) continue; // bounding circle
+        if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
 
-        //col += .5;
+        ripple = sdRipple(uv)/800.;
 
-        vec2 p = koi.xy*rot(koi.z);
+        p *= rot(koi.z);
+        p += ripple;
         
         if(sdCircle(vec2(abs(p.x)-.05,p.y+.1)-vec2(0.,0.),.02)<0.) { // eyeballs
             col = vec3(0);
@@ -225,7 +226,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         float d = sdKoi(p); // exact bounds
 
-        if(d<0.){
+        if(d<0.) // if within koi use its color
+        {
             col = colKoi(p, d, id);
             break;
         }
