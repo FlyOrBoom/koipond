@@ -9,15 +9,18 @@ class KoiPond {
         this.kois = new Float32Array(this.MAX_POPULATION*this.ATTRIBUTES_PER_KOI)
                      .map( koiAttribute => Math.random()-0.5 )
     }
-    add ( babies ) {
+    add (babies) {
         this.population += babies
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }
-    update ( delta ) {
+    update (time, delta) {
         for (let i = 0; i < this.MAX_POPULATION; i+= this.ATTRIBUTES_PER_KOI) {
             const ID = i*this.ATTRIBUTES_PER_KOI
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
-            x += delta/2
+	    theta = noise(time/100)
+	    
+            x -= Math.cos(theta+Math.PI/2)/50
+            y += Math.sin(theta+Math.PI/2)/50
             
             this.kois[ID+0] = mod(x,1)
             this.kois[ID+1] = mod(y,1)
@@ -28,4 +31,11 @@ class KoiPond {
 }
 function mod(a,b){
     return (a+b)%(2*b)-b
+}
+function noise(x){
+    let y = 0
+    for(let i = 0; i<5; i++){
+	y += Math.sin(x*Math.PI**i)
+    }
+    return y
 }

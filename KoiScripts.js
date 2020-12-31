@@ -9,15 +9,18 @@ class KoiPond {
         this.kois = new Float32Array(this.MAX_POPULATION*this.ATTRIBUTES_PER_KOI)
                      .map( koiAttribute => Math.random()-0.5 )
     }
-    add ( babies ) {
+    add (babies) {
         this.population += babies
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }
-    update ( delta ) {
+    update (time, delta) {
         for (let i = 0; i < this.MAX_POPULATION; i+= this.ATTRIBUTES_PER_KOI) {
             const ID = i*this.ATTRIBUTES_PER_KOI
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
-            x += delta/2
+	    theta = noise(time/100)
+	    
+            x -= Math.cos(theta+Math.PI/2)/50
+            y += Math.sin(theta+Math.PI/2)/50
             
             this.kois[ID+0] = mod(x,1)
             this.kois[ID+1] = mod(y,1)
@@ -28,6 +31,13 @@ class KoiPond {
 }
 function mod(a,b){
     return (a+b)%(2*b)-b
+}
+function noise(x){
+    let y = 0
+    for(let i = 0; i<5; i++){
+	y += Math.sin(x*Math.PI**i)
+    }
+    return y
 }
 const defaultShaderType = [
     'VERTEX_SHADER',
@@ -189,7 +199,7 @@ const fragmentShaderCode = `
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
     const int SEED = ${pond.SEED};
-    const float RIPPLE_DIVS = .5;
+    const float RIPPLE_DIV = .5;
     const float PI = 3.14159;
     const float TAU = 6.28319;
     const float BEVEL = .4;
@@ -335,12 +345,11 @@ float sdKoi(vec2 p)
 float sdRipple(vec2 uv)
 {
     float h = 0.;
-    float div = .5;
-    vec2 p = vec2(-1.);
-    for (; p.x<1.; p.x+=div)
+    for (float x = -1.; x<1.; x += RIPPLE_DIV)
     {
-        for (p.y=-1.; p.y<1.; p.y+=div)
+        for (float y = -1.; y<1.; y += RIPPLE_DIV)
         {
+	    vec2 p = vec2(x,y);
             vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
             
             float radius = length(uv-p-displacement);
@@ -485,7 +494,7 @@ function render(now) {
     time += delta
     then = now
     
-    pond.update(delta)
+    pond.update(time, delta)
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 

@@ -21,7 +21,7 @@ const fragmentShaderCode = `
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
     const int SEED = ${pond.SEED};
-    const float RIPPLE_DIVS = .5;
+    const float RIPPLE_DIV = .5;
     const float PI = 3.14159;
     const float TAU = 6.28319;
     const float BEVEL = .4;
@@ -87,7 +87,7 @@ function render(now) {
     time += delta
     then = now
     
-    pond.update(delta)
+    pond.update(time, delta)
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
