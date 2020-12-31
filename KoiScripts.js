@@ -348,11 +348,12 @@ float sdKoi(vec2 p)
 float sdRipple(vec2 uv)
 {
     float h = 0.;
-    for (float x = -1.; x<1.; x += RIPPLE_DIV)
+    float div = .5;
+    vec2 p = vec2(-1.);
+    for (; p.x<1.; p.x+=div)
     {
-        for (float y = -1.; y<1.; y += RIPPLE_DIV)
+        for (p.y=-1.; p.y<1.; p.y+=div)
         {
-	    vec2 p = vec2(x,y);
             vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
             
             float radius = length(uv-p-displacement);
@@ -381,10 +382,25 @@ vec3 colKoi(vec2 p, float d, int id)
     
     if(sdCircle(vec2(abs(p.x)-.05,p.y+.11)-vec2(0.,0.),.02)<0.) return vec3(0); // eyeballs
     
-    if(style>.8) return mask*vec3(0,.5,1);
-    if(style>.6) return mask+vec3(1,0,0);
-    if(style>.4) return mask+vec3(1,.5,0);
-    return mask*vec3(1.,.5,.5)+vec3(1,.3,0);
+    vec3 col = vec3(mask);
+    
+    if(style>.8) {
+        col *= vec3(0,.5,1);
+    } else if(style>.6) {
+        col += vec3(1,0,0);
+    } else if(style>.4) {
+        col += vec3(1,.5,0);
+    } else {
+        col *= vec3(1.,.5,.5); col += vec3(1,.3,0);
+    }
+    
+    float h = -min(d,0.); // "height" of koi
+    
+    col = clamp(col,0.,1.);
+    
+    if(p.x>0.) col *= .8;
+    
+    return col;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -408,12 +424,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
 
         vec3 koi = kois[id].xyz;
-
-        if(length(uv+koi.xy)>MAX_KOI_SIZE) continue; // bounding circle
+        koi.xy += uv;
+        koi.xy = mod(koi.xy-1.,2.)-1.; // tile
+        
+        if(length(koi.xy)>MAX_KOI_SIZE) continue; // bounding circle
 
         //col += .5;
 
-        vec2 p = (uv+koi.xy)*rot(koi.z);
+        vec2 p = koi.xy*rot(koi.z);
 
         p.x+=sin(iTime+p.y*3.+float(id))*.1*p.y; // warp swimming
 
