@@ -30,7 +30,7 @@ class KoiPond {
     }
 }
 function mod(a,b){
-    return (a+b)%(2*b)-b
+    return a-b*Math.floor(a/b)
 }
 function noise(x){
     let y = 0
