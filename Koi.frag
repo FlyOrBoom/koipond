@@ -138,9 +138,9 @@ float sdKoi(vec2 p)
 float sdRipple(vec2 uv)
 {
     float h = 0.;
-    for (float x = -1.; x<1.; x ++)
+    for (int x = -1; x<=1; x++)
     {
-        for (float y = -1.; y<1.; y ++)
+        for (int y = -1; y<=1; y++)
         {
             vec2 p = vec2(x,y);
             vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
@@ -230,6 +230,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
 
     if(shadow) col *= .9;
-
+    
     fragColor = vec4(col,1);
 }
