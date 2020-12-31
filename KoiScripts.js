@@ -33,7 +33,7 @@ function mod(a,b){
     return a-b*Math.floor(a/b)
 }
 function torus(a,b){
-    return mod(a-b,2*b)-1
+    return mod(a-b,2*b)-b
 }
 function noise(x){
     let y = 0
