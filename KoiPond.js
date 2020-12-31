@@ -16,11 +16,16 @@ class KoiPond {
     update ( delta ) {
         for (let i = 0; i < this.MAX_POPULATION; i+= this.ATTRIBUTES_PER_KOI) {
             const ID = i*this.ATTRIBUTES_PER_KOI
-            var x = kois[ID+0]
-            var y = kois[ID+1]
-            var theta = kois[ID+3]
-            // fishes[ID+4] is for something. Dunno what yet
+            var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
+            x += delta/2
+            
+            this.kois[ID+0] = mod(x,1)
+            this.kois[ID+1] = mod(y,1)
+            this.kois[ID+2] = mod(theta,2*Math.PI)
+            this.kois[ID+3] = style
         }
     }
 }
-
+function mod(a,b){
+    return (a+b)%(2*b)-b
+}

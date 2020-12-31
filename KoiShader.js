@@ -21,7 +21,7 @@ const fragmentShaderCode = `
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
     const int SEED = ${pond.SEED};
-    const int RIPPLE_DIVS = 3;
+    const float RIPPLE_DIVS = .5;
     const float PI = 3.14159;
     const float TAU = 6.28319;
     const float BEVEL = .4;
@@ -78,14 +78,16 @@ let running = false
 
 function render(now) {
     now *= 0.001 // convert to seconds
-    const elapsedTime = Math.min(now - then, 0.1)
+    const delta = Math.min(now - then, 0.1)
 
     timeSamples.shift()
-    timeSamples.push(elapsedTime)
+    timeSamples.push(delta)
     debug.innerText = Math.round(10 * timeSamples.length / timeSamples.reduce((a, b) => a + b, 0)) / 10 + ' fps'
 
-    time += elapsedTime
+    time += delta
     then = now
+    
+    pond.update(delta)
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
