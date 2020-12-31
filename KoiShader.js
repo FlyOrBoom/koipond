@@ -53,12 +53,12 @@ gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
 
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
     -1, -1, // first triangle
-    -1, 1,
-    1, -1,
-    -1, 1, // second triangle
-    1, -1,
-    1, 1,
-]), gl.STATIC_DRAW);
+    +1, -1,
+    -1, +1,
+    -1, +1, // second triangle
+    +1, -1,
+    +1, +1,
+]), gl.STATIC_DRAW)
 
 gl.vertexAttribPointer(
     handles.position,
@@ -68,6 +68,9 @@ gl.vertexAttribPointer(
     0, // 0 = move forward size * sizeof(type) each iteration to get the next position
     0, // start at the beginning of the buffer
 )
+
+gl.enable(gl.CULL_FACE)
+gl.cullFace(gl.BACK)
 
 gl.useProgram(program)
 gl.enableVertexAttribArray(handles.position)
