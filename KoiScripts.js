@@ -19,10 +19,13 @@ class KoiPond {
             const ID = i*this.ATTRIBUTES_PER_KOI
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
-	        theta = noise(time/100)[0]
+            
+            const [n,dn] = noise(time/100);
+            
+            theta = n;
 	    
-            x -= Math.cos(theta+Math.PI/2)/50
-            y += Math.sin(theta+Math.PI/2)/50
+            x -= Math.cos(theta+Math.PI/2)/50*dn
+            y += Math.sin(theta+Math.PI/2)/50*dn
             
             this.kois[ID+0] = torus(x,1)
             this.kois[ID+1] = torus(y,1)
