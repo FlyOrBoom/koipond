@@ -5,7 +5,6 @@
  * Includes code by...
  * - Dave Hoskins: Hash without Sine (https://www.shadertoy.com/view/4djSRW)
  * - Inigo Quilez: 2D SDFs (https://www.iquilezles.org/www/articles/distfunctions2d/distfunctions2d.htm)
- * - Basmanov Daniil: Regular polygon SDF (https://www.shadertoy.com/view/MtScRG)
  *
  */
 
@@ -57,9 +56,10 @@ float value(vec2 p)
 }
 float skin(vec2 p, float style)
 {
+    float r = hash(style);
     return floor(0.5+pow(
-        cos(value(p)/2.),
-        50.*ceil(style*6.) // Variation in darkness
+        cos(value(p*(1.+r)+r*10.)/2.),
+        50.*ceil(r*6.) // Variation in darkness
     ));
 
 }
@@ -69,7 +69,7 @@ float sdCircle( vec2 p, float r )
     return length(p) - r;
 }
 
-float sdEllipseBound(vec2 p, vec2 r) // Bound
+float sdEllipseBound(vec2 p, vec2 r)
 {
     return sdCircle(p*vec2(r.y/r.x,1),r.y);
 }
@@ -95,23 +95,6 @@ float sdCrescent(vec2 p, float r)
         sdCircle(vec2(abs(p.x)-r/2.,p.y),r),
         -sdCircle(vec2(abs(p.x)-r/2.,p.y-r/1.9),r)
     );
-}
-float sdPolygon(vec2 p, float vertices, float radius)
-{
-    float segmentAngle = TAU/vertices;
-    float halfSegmentAngle = segmentAngle*0.5;
-
-    float angleRadians = atan(p.x, p.y);
-    float repeat = mod(angleRadians, segmentAngle) - halfSegmentAngle;
-    float inradius = radius*cos(halfSegmentAngle);
-    float circle = length(p);
-    float x = sin(repeat)*circle;
-    float y = cos(repeat)*circle - inradius;
-
-    float inside = min(y, 0.0);
-    float corner = radius*sin(halfSegmentAngle);
-    float outside = length(vec2(max(abs(x) - corner, 0.0), y))*step(0.0, y);
-    return inside + outside;
 }
 float sdKoi(vec2 p)
 {
@@ -159,9 +142,8 @@ float sdRipple(vec2 uv)
 }
 
 //-- KOI
-vec3 colKoi(vec2 p, float d, int id)
+vec3 colKoi(vec2 p, float d, float style)
 {        
-    float style = hash(float(100*id+SEED));
     vec2 q = 5.*(p+style)/MAX_KOI_SIZE;
     float mask = skin(q+3.,style);
         
@@ -186,6 +168,12 @@ vec3 colKoi(vec2 p, float d, int id)
     return col;
 }
 
+vec2 warp(vec2 p, mat2 r, float style, float ripple){
+    p *= r;
+    p.x += sin(8.*(iTime+style)+p.y*3.)*.1*p.y;
+    return p + ripple;
+}
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
@@ -199,8 +187,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     {
         if(id==population) break;
 
-        vec3 koi = kois[id].xyz;
+        vec4 koi = kois[id];
+        
         vec2 p = koi.xy;
+        mat2 r = rot(koi.z);
+        float style = koi.w;
+        
         p += uv;
         p = mod(p-1.,2.)-1.; // tile
         
@@ -208,28 +200,29 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         ripple = sdRipple(uv)/800.;
 
-        p *= rot(koi.z);
-        p += ripple;
+        vec2 pKoi = warp(p,r,style,ripple);
         
-        if(sdCircle(vec2(abs(p.x)-.05,p.y+.1)-vec2(0.,0.),.02)<0.) { // eyeballs
+        if(sdCircle(vec2(abs(pKoi.x)-.05,pKoi.y+.1)-vec2(0.,0.),.02)<0.) { // eyeballs
             col = vec3(0);
             break;
         }
 
-        p.x+=sin(iTime+p.y*3.+float(id))*.1*p.y; // warp swimming
 
-        float d = sdKoi(p); // exact bounds
+        float d = sdKoi(pKoi); // exact bounds
 
         if(d<0.) // if within koi use its color
         {
-            col = colKoi(p, d, id);
+            col = colKoi(pKoi, d, style);
             break;
         }
+        
+        vec2 pShadow = warp(p-uv/8.,r,style,ripple);
 
-        if(sdKoi(p-uv/8.)<0.) shadow = true;
+        shadow = shadow || sdKoi(pShadow) < 0.;
     }
 
     if(shadow) col *= .9;
     
     fragColor = vec4(col,1);
+    
 }
