@@ -20,13 +20,14 @@ class KoiPond {
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
             
-            const [n,dn] = noise(time/100);
+            const [n,dn] = noise(time/100+style*100);
             
-            theta = n;
+            theta = n*Math.PI;
 	    
-            x -= Math.cos(theta+Math.PI/2)/50*dn
-            y += Math.sin(theta+Math.PI/2)/50*dn
-            
+            const ease = Math.exp(-((dn/500)**2)) // Normal distribution: Semi-inverse relationship between rotational and linear velocities
+            x -= Math.cos(theta+Math.PI/2)/50*ease
+            y += Math.sin(theta+Math.PI/2)/50*ease
+
             this.kois[ID+0] = torus(x,1)
             this.kois[ID+1] = torus(y,1)
             this.kois[ID+2] = mod(theta,2*Math.PI)
@@ -42,7 +43,7 @@ function torus(a,b){
 }
 function noise(x){
     let y = 0, dy = 0
-    for(let i = 0; i<5; i++){
+    for(let i = 0; i<5; i+=0.5){
         const e = Math.exp(i)
     	y += Math.sin(x*e)
         dy += e*Math.cos(x*e)
