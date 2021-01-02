@@ -7,7 +7,21 @@ class KoiPond {
 
         this.population = 1
         this.kois = new Float32Array(this.MAX_POPULATION*this.ATTRIBUTES_PER_KOI)
-                     .map( koiAttribute => Math.random()-0.5 )
+                        .map( (koiAttribute, index) => {
+                            const r = Math.random()
+                            switch( index%4 ){
+                                case 1:
+                                case 2:
+                                    r*2-1
+                                    break
+                                case 3:
+                                    r*2*Math.PI
+                                    break
+                                case 4:
+                                    r
+                                    break
+                            }
+                        })
     }
     add (babies) {
         this.population += babies
