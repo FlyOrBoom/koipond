@@ -19,7 +19,7 @@ class KoiPond {
             const ID = i*this.ATTRIBUTES_PER_KOI
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
-	    theta = noise(time/100)
+	        theta = noise(time/100)[0]
 	    
             x -= Math.cos(theta+Math.PI/2)/50
             y += Math.sin(theta+Math.PI/2)/50
@@ -38,9 +38,11 @@ function torus(a,b){
     return mod(a-b,2*b)-b
 }
 function noise(x){
-    let y = 0
+    let y = 0, dy = 0
     for(let i = 0; i<5; i++){
-	y += Math.sin(x*Math.PI**i)
+        const e = Math.exp(i)
+    	y += Math.sin(x*e)
+        dy += e*Math.cos(x*e)
     }
-    return y
+    return [y,dy]
 }
