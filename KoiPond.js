@@ -10,14 +10,14 @@ class KoiPond {
                         .map( (koiAttribute, index) => {
                             const r = Math.random()
                             switch( index%4 ){
+                                case 0:
                                 case 1:
-                                case 2:
                                     r*2-1
                                     break
-                                case 3:
+                                case 2:
                                     r*2*Math.PI
                                     break
-                                case 4:
+                                case 3:
                                     r
                                     break
                             }
