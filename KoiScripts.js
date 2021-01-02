@@ -24,9 +24,9 @@ class KoiPond {
             
             theta = n*Math.PI;
 	    
-            const ease = Math.exp(-((dn/800)**2)) // Normal distribution: Semi-inverse relationship between rotational and linear velocities
-            x -= Math.cos(theta+Math.PI/2)/100*ease
-            y += Math.sin(theta+Math.PI/2)/100*ease
+            const bimodal = normal(dn/100+1)+normal(dn/100-1) // Move fastest when rotating slightly
+            x -= Math.cos(theta+Math.PI/2)/100*bimodal
+            y += Math.sin(theta+Math.PI/2)/100*bimodal
 
             this.kois[ID+0] = torus(x,1)
             this.kois[ID+1] = torus(y,1)
@@ -40,6 +40,9 @@ function mod(a,b){
 }
 function torus(a,b){
     return mod(a-b,2*b)-b
+}
+function normal(a){
+    return Math.exp(-a*a)
 }
 function noise(x){
     let y = 0, dy = 0
