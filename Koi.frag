@@ -140,28 +140,6 @@ float sdKoi(vec2 p)
     d /= r;
     return d;
 }
-float sdRipple(vec2 uv)
-{
-    float h = 0.;
-    for (int x = -1; x<=1; x++)
-    {
-        for (int y = -1; y<=1; y++)
-        {
-            vec2 p = vec2(x,y);
-            vec2 displacement = vec2(hash(p.xy),hash(p.yx))*2.-1.;
-            
-            float radius = length(uv-p-displacement);
-
-            float n = iTime-length(displacement)*5.;
-            float frequency = radius*50.;
-            
-            float wave = sin(frequency-(TAU*n));
-
-            h += wave;	
-        }
-    }
-    return h;
-}
 
 //-- KOI
 vec3 colKoi(vec2 p, float d, float style)
@@ -193,7 +171,7 @@ vec3 colKoi(vec2 p, float d, float style)
 vec2 warp(vec2 p, vec2 uv, mat2 r, float style, float ripple){
     p *= r;
     p.x += sin(8.*(iTime+style)+p.y*3.)*.1*p.y;
-    return (p+uv)*(1.+ripple)-uv;
+    return (p-uv)*(1.+ripple/50.)+uv;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -220,16 +198,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         
         if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
 
-        ripple = length(uv)*sdRipple(uv)/100.; // More ripple further out a la fresnel
+        ripple = sin(length(uv)*16.-iTime*4.);
 
-        vec2 pKoi = warp(p,uv, r,style,ripple);
+        vec2 pKoi = warp(p,uv,r,style,ripple);
+        vec2 pKoi2 = warp(p,uv,r,style,0.);
         
-        bool eyes = length(vec2(abs(pKoi.x)-.05,pKoi.y+.10)-vec2(0.,0.))<0.01;
+        bool eyes = length(vec2(abs(pKoi2.x)-.05,pKoi2.y+.10)-vec2(0.,0.))<0.01;
         if(eyes) { // eyeballs
             col = vec3(0);
             break;
         }
-
 
         float d = sdKoi(pKoi); // exact bounds
 
@@ -238,6 +216,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             col = colKoi(pKoi, d, style);
             break;
         }
+        
         
         vec2 pShadow = warp(p-uv/16.,uv, r,style,ripple);
 
