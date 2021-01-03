@@ -178,10 +178,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     vec3 col = vec3(.5,.6,.5); // background color
-    float ripple = cos(pow(dot(uv,uv),.7)*16.-iTime*4.);
-    ripple *= 4.*value(uv*2.+iTime*2.);
-    uv *= 1.+ripple/25.;
-    col *= 1.+floor(4.*value(uv*8.))/24.;
+    float ripple = cos(length(uv)*64.-iTime*16.);
+    uv *= 1.+ripple/128.;
+    col *= 1.+floor(4.*value(uv*8.))/32.;
 
     bool shadow = false;
     
