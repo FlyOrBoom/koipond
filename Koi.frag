@@ -171,18 +171,20 @@ vec3 colKoi(vec2 p, float d, float style)
 vec2 warp(vec2 p, vec2 uv, mat2 r, float style, float ripple){
     p *= r;
     p.x += sin(8.*(iTime+style)+p.y*3.)*.1*p.y;
-    return (p-uv)*(1.+ripple/50.)+uv;
+    return p;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     vec3 col = vec3(.5,.6,.5); // background color
+    float ripple = cos(pow(dot(uv,uv),.7)*16.-iTime*4.);
+    ripple *= 4.*value(uv*2.+iTime*2.);
+    uv *= 1.+ripple/25.;
+    col *= 1.+floor(4.*value(uv*8.))/24.;
 
     bool shadow = false;
     
-    float ripple = 0.;
-
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
         if(id==population) break;
@@ -194,16 +196,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         float style = koi.w;
         
         p += uv;
-        p = mod(p-1.,2.)-1.; // tile
         
         if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
 
-        ripple = sin(length(uv)*16.-iTime*4.);
-
         vec2 pKoi = warp(p,uv,r,style,ripple);
-        vec2 pKoi2 = warp(p,uv,r,style,0.);
         
-        bool eyes = length(vec2(abs(pKoi2.x)-.05,pKoi2.y+.10)-vec2(0.,0.))<0.01;
+        bool eyes = length(vec2(abs(pKoi.x)-.03,pKoi.y+.06)-vec2(0.,0.))<0.01;
         if(eyes) { // eyeballs
             col = vec3(0);
             break;
