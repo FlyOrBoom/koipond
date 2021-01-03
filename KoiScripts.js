@@ -2,7 +2,7 @@ class KoiPond {
     constructor () {
         this.ATTRIBUTES_PER_KOI = 4
         this.MAX_POPULATION = 64
-        this.MAX_KOI_SIZE = 0.5
+        this.MAX_KOI_SIZE = 0.3
         this.SEED = Math.round(Math.random()*128)
 
         this.population = 1
