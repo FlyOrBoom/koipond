@@ -469,12 +469,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         
         vec2 pShadow = warp(p-uv/16.,uv, r,style,ripple);
 
-        if(sdKoi(pShadow)<0.)
-        {
-            col *= .0;
-            break;
-        }
+        shadow = shadow || sdKoi(pShadow)<0.;
     }
+    
+    if(shadow) col *= .9;
 
     
     fragColor = vec4(col,1);
