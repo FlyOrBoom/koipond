@@ -190,10 +190,10 @@ vec3 colKoi(vec2 p, float d, float style)
     return col;
 }
 
-vec2 warp(vec2 p, mat2 r, float style, float ripple){
+vec2 warp(vec2 p, vec2 uv, mat2 r, float style, float ripple){
     p *= r;
     p.x += sin(8.*(iTime+style)+p.y*3.)*.1*p.y;
-    return p + ripple;
+    return (p+uv)*(1.+ripple)-uv;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -222,10 +222,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         ripple = length(uv)*sdRipple(uv)/100.; // More ripple further out a la fresnel
 
-        vec2 pKoi = warp(p,r,style,ripple);
+        vec2 pKoi = warp(p,uv, r,style,ripple);
         
         bool eyes = length(vec2(abs(pKoi.x)-.05,pKoi.y+.10)-vec2(0.,0.))<0.01;
-        bool mouth = abs(sdParabola(vec2(pKoi.x,pKoi.y+.12),.02,-.01))<0.005;
         if(eyes) { // eyeballs
             col = vec3(0);
             break;
@@ -239,13 +238,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             col = colKoi(pKoi, d, style);
             break;
         }
-        if(d<0.1)
-        {
-            col*= 0.;
-            break;
-        }
         
-        vec2 pShadow = warp(p-uv/16.,r,style,ripple);
+        vec2 pShadow = warp(p-uv/16.,uv, r,style,ripple);
 
         if(sdKoi(pShadow)<0.)
         {
