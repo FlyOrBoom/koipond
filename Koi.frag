@@ -196,6 +196,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         float style = koi.w;
         
         p += uv;
+        p = mod(p-1.,2.)-1.; // tile
         
         if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
 
