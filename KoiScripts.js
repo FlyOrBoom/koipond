@@ -286,8 +286,8 @@ float skin(vec2 p, float style)
 {
     float r = hash(style);
     return floor(0.5+pow(
-        cos(value(p*(1.+r)+r*10.)/2.),
-        50.*ceil(r*6.) // Variation in darkness
+        cos(value(p+r*100.)),
+        50.
     ));
 
 }
@@ -306,6 +306,28 @@ float sdEllipseApprox(vec2 p, vec2 r)
     float k0 = length(p/r);
     float k1 = length(p/(r*r));
     return k0*(k0-1.0)/k1;
+}
+float sdParabola( in vec2 pos, in float wi, in float he )
+{
+    pos.x = abs(pos.x);
+
+    float ik = wi*wi/he;
+    float p = ik*(he-pos.y-0.5*ik)/3.0;
+    float q = pos.x*ik*ik*0.25;
+    
+    float h = q*q - p*p*p;
+    float r = sqrt(abs(h));
+
+    float x = (h>0.0) ? 
+        // 1 root
+        pow(q+r,1.0/3.0) - pow(abs(q-r),1.0/3.0)*sign(r-q) :
+        // 3 roots
+        2.0*cos(atan(r/q)/3.0)*sqrt(p);
+    
+    x = min(x,wi);
+    
+    return length(pos-vec2(x,he-x*x/ik)) * 
+           sign(ik*(pos.y-he)+pos.x*pos.x);
 }
 float sdVesica(vec2 p, float r, float d)
 {
@@ -378,7 +400,7 @@ vec3 colKoi(vec2 p, float d, float style)
     vec3 col = vec3(mask);
     
     if(style>.8) {
-        col *= vec3(0,.5,1);
+        col *= vec3(0.,.5,1); col += vec3(0,0,.5);
     } else if(style>.6) {
         col += vec3(1,0,0);
     } else if(style>.4) {
@@ -386,12 +408,12 @@ vec3 colKoi(vec2 p, float d, float style)
     } else {
         col *= vec3(1.,.5,.5); col += vec3(1,.3,0);
     }
-    
+        
     float h = clamp(-d,0.,1.); // "height" of koi
     
     col = clamp(col,0.,1.);
     
-    col *= ceil(3.*h)/12.+.75;
+    //col *= ceil(3.*h)/6.+.5; // shadow
     
     return col;
 }
@@ -426,11 +448,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         
         if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
 
-        ripple = sdRipple(uv)/800.;
+        ripple = length(uv)*sdRipple(uv)/100.; // More ripple further out a la fresnel
 
         vec2 pKoi = warp(p,r,style,ripple);
         
-        if(sdCircle(vec2(abs(pKoi.x)-.05,pKoi.y+.1)-vec2(0.,0.),.02)<0.) { // eyeballs
+        bool eyes = length(vec2(abs(pKoi.x)-.05,pKoi.y+.10)-vec2(0.,0.))<0.01;
+        bool mouth = abs(sdParabola(vec2(pKoi.x,pKoi.y+.12),.02,-.01))<0.005;
+        if(eyes) { // eyeballs
             col = vec3(0);
             break;
         }
@@ -443,13 +467,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             col = colKoi(pKoi, d, style);
             break;
         }
+        if(d<0.1)
+        {
+            col*= 0.;
+            break;
+        }
         
-        vec2 pShadow = warp(p-uv/8.,r,style,ripple);
+        vec2 pShadow = warp(p-uv/16.,r,style,ripple);
 
-        shadow = shadow || sdKoi(pShadow) < 0.;
+        if(sdKoi(pShadow)<0.)
+        {
+            col *= .0;
+            break;
+        }
     }
 
-    if(shadow) col *= .9;
     
     fragColor = vec4(col,1);
     
