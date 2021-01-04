@@ -62,7 +62,7 @@ float value( in vec2 p )
 float skin(vec2 p, float d, float style)
 {
     float r = hash(style);
-    return .3*d+pow(
+    return max(d*.5,0.)+pow(
         cos(value(p/2.+r*100.)),
         50.
     );
