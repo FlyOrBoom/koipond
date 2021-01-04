@@ -167,9 +167,7 @@ vec3 colKoi(vec2 p, float d, float style)
         }
         
     }
-    
-    if(skin(8.*q+2.,d,style)<.5) col = vec3(0);
-        
+            
     float h = clamp(-d,0.,1.); // "height" of koi
     
     col = clamp(col,0.,1.);
@@ -214,9 +212,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         float eyes = length(vec2(abs(pKoi.x)-.03,pKoi.y+.06)-vec2(0.,0.));
         if(eyes<0.01) { // eyeballs
             col = vec3(0);
-            break;
-        }else if(eyes<0.02){
-            col = vec3(1);
             break;
         }
 
