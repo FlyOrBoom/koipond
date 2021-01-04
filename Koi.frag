@@ -224,7 +224,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         if(d<3.) // if within koi use its color
         {
-            col = colKoi(p, d, style);
+            col = colKoi(uv, d, style);
         }
         if(d<.2)
         {
