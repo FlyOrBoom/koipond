@@ -45,7 +45,7 @@ vec2 hash2(vec2 p)
 
 
 //-- NOISE
-float value( in vec2 p )
+float gradient( in vec2 p )
 {
     vec2 i = floor( p );
     vec2 f = fract( p );
@@ -58,15 +58,10 @@ float value( in vec2 p )
                      dot( hash2( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
 }
 
-
-float skin(vec2 p, float d, float style)
+float skin(vec2 p, float style)
 {
     float r = hash(style);
-    return max(d*.5,0.)+pow(
-        cos(value(p/2.+r*100.)),
-        50.
-    );
-
+    return gradient(p+r*100.);
 }
 //-- DISTANCE FUNCTIONS
 float sdCircle( vec2 p, float r )
@@ -110,84 +105,123 @@ float sdVesica(vec2 p, float r, float d)
 {
     return length(abs(p)-vec2(-d,0))-r;
 }
-float sdGinko(vec2 p, float r, float m)
+float sdDroplet( vec2 p, float r )
 {
-    float cut = sdCircle(vec2(abs(p.x)-r,-p.y),r);
-    return max(sdCircle(p,r),-cut);
+    return length(p-vec2(0.,r)) - r;
 }
-float sdCrescent(vec2 p, float r)
+float sdEgg( vec2 p, float r )
 {
-    return max(
-        sdCircle(vec2(abs(p.x)-r/2.,p.y),r),
-        -sdCircle(vec2(abs(p.x)-r/2.,p.y-r/1.9),r)
+    const float k = sqrt(3.0);
+    p.x = abs(p.x);
+    return ((p.y<0.0)       ? length(vec2(p.x,  p.y    )) - r :
+            (k*(p.x+r)<p.y) ? length(vec2(p.x,  p.y-k*r)) :
+                              length(vec2(p.x+r,p.y    )) - 2.0*r);
+}
+float sdFins(vec2 p, float r, float size)
+{
+    float side = sign(p.x)*PI/2.;
+    p.x = abs(p.x)-r/2.-size*3.;
+    return smin(
+        sdCircle(p-vec2(0,cos(2.*iTime+p.y*8.+side)/8.-r/8.)/4.,size/2.),
+        sdCircle(p,size),
+        r
     );
 }
-float sdKoi(vec2 p)
+vec3 palette(float style)
 {
-    float d = 1.;
+    style = mod(style,1.);
+    
+    if ( style<.1 )
+        return vec3(.1,.1,.2); // black
 
-    float r =    0.15*MAX_KOI_SIZE; // length of koi's semi-minor axis
-    float head = 0.30*MAX_KOI_SIZE;
-    float body = 0.50*MAX_KOI_SIZE;
-    float tail = 0.30*MAX_KOI_SIZE;
-    float fins = 0.13*MAX_KOI_SIZE;
+    if ( style<.2 )
+        return vec3(.96,.33,.13); // chestnut
 
-    if(p.y < 0. ) { // if pixel in head
-        d = sdEllipseApprox(p,vec2(r,head));
-    } else if(p.y>body){ // if pixel in tail
-        d = sdGinko(p-vec2(0,body),tail,2.5);
-    }else {
-        float vesica_r = (body*body/r+r)/2.; //radii of the two circles that intersect to form a body-high vesica
-        d = sdVesica(p,vesica_r,vesica_r-r);
-    }
-    d = min(d,sdCrescent(p,fins));
-    d /= r;
-    return d;
+    if ( style<.3 )
+        return vec3(.9,.2,.2); // red
+        
+    if ( style<.4 )
+        return vec3(.9,.8,.8); // white
+        
+    if ( style<.5 )
+        return vec3(.8,.8,.9); //sky
+        
+    if ( style<.6 )
+        return vec3(.9,.3,.2); // orange
+        
+    if ( style<.7 )
+        return vec3(.9,.6,.7); // pink
+        
+    if ( style<.8 )
+        return vec3(.9,.9,.8); // sand
+        
+    if ( style<.9 )
+        return vec3(.3,.3,.9); // blue
+    
+    return vec3(.99,.72,.33); // gold
+    
 }
+vec4 Koi(vec2 p,mat2 ro,float style)
+{    
+    vec3 col = palette(style);
 
-//-- KOI
-vec3 colKoi(vec2 p, float d, float style)
-{        
-    vec2 q = (p+style)/MAX_KOI_SIZE;
-        
-    vec3 col = vec3(1);
-        
-    if(skin(5.*q+3.,d,style)<.8){
-    
-        if(style>.8) {
-            col = vec3(1,0,0);
-        } else if(style>.6) { // Shiro
-            col = vec3(1,.5,0);
-        } else if(style>.4) {
-            col = vec3(1,0,.5);
-        } else if(style>.2) {
-            col = vec3(0,0,1);
-        } else { // Tancho
-            col = vec3(0,.5,1);
-        }
-        
-    }
+    float d = 1.;
+    bool shade = false;
+
+    float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
+    float body = 0.50*MAX_KOI_SIZE;
+    float tail = 0.10*MAX_KOI_SIZE;
+    float fins = 0.04*MAX_KOI_SIZE;
+    float eyes = 0.02*MAX_KOI_SIZE;
+    vec2 v = vec2(0,1);
+
+    p *= ro;
+    float dx = sin(2.*(iTime+style)+p.y*4.);
+    dx /= 8.;
+    dx *= p.y;
+    p.x += dx;
+
+    d = sdEgg(p,r); // body
+    d = smin(d,sdCircle(p+r*v,r/2.),1.5*r);
+    d = smin(d,sdDroplet(p-(body+tail/2.)*v,tail),2.1*r);
+
+    float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
+
+    if( d<0. ){
+        vec2 q = (p+style)/MAX_KOI_SIZE;
+        float t = 0.; // threshold
+        t = min(1.,(p.y-body*.9)*16.); // keep out of tail
+        t = max(t,min(1.,-d/r/16.)); // keep near edge
+
+        float s1 = skin(4.*q-9.,style);
+        float s2 = skin(8.*q+9.,style)*max(0.,s1+0.1);
+        if(s1>t)
+            col = mix(col,palette(style+.2),.8);
             
-    float h = clamp(-d,0.,1.); // "height" of koi
+        if(s2>t)
+            col = mix(col,palette(style-.2),.8);
+    }
     
+    if(sdEyes<eyes) col = vec3(0);
+
+    float f = sdFins(p,r,fins);
+
+    d = min(d,f);
+    d /= r;
+
     col = clamp(col,0.,1.);
     
-    //col *= ceil(3.*h)/6.+.5; // shadow
-    
-    return col;
+    return vec4(col,d);
 }
 
-vec2 warp(vec2 p, mat2 r, float style, float ripple){
-    p *= r;
-    p.x += sin(8.*(iTime+style)+p.y*3.)*.1*p.y;
-    return p;
-}
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
-    vec3 col = vec3(1); // background color
-    float ripple = value(uv*2.+iTime*2.);
+    
+    vec3 col = vec3(.6,.8,.7); // background color
+    float ripple = 0.;
+    ripple *= 4.*gradient(uv*2.+iTime*2.);
     uv *= 1.+ripple/64.;
 
     bool shadow = false;
@@ -199,42 +233,29 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec4 koi = kois[id];
         
         vec2 p = koi.xy;
-        mat2 r = rot(koi.z);
+        mat2 ro = rot(koi.z);
         float style = koi.w;
-        
+     
         p += uv;
         p = mod(p-1.,2.)-1.; // tile
         
         if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
-
-        vec2 pKoi = warp(p,r,style,ripple);
         
-        float eyes = length(vec2(abs(pKoi.x)-.03,pKoi.y+.06)-vec2(0.,0.));
-        if(eyes<0.01) { // eyeballs
-            col = vec3(0);
-            break;
-        }
+        vec4 koiCol = Koi(p,ro,style); // exact bounds
 
-        float d = sdKoi(pKoi); // exact bounds
-
-        if(d<3.) // if within koi use its color
+        if(koiCol.a<0.) // if within koi use its color
         {
-            col = colKoi(uv, d, style);
-        }
-        if(d<.2)
-        {
-            if(d>0.) col *= 0.;
+            col = koiCol.rgb;
             break;
         }
         
         
-        vec2 pShadow = warp(p-uv/16.,r,style,ripple);
-
-        shadow = shadow || sdKoi(pShadow)<0.;
+        //shadow = shadow || sdKoi(p-uv/16.,ro,style).x<0.;
     }
     
-    uv *= 1.-ripple/12.;
+    //if(shadow) col *= .9;
 
+    uv *= 1.-ripple/12.;
     
     fragColor = vec4(col,1);
     
