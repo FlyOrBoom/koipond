@@ -127,6 +127,33 @@ float sdFins(vec2 p, float r, float size)
         r
     );
 }
+float sdRipple(vec2 p)
+{
+    float s = 0.; // sum of heights
+    const float f = 32.; // frequency
+    const int n = 2;
+    const float r = 1.5;
+    float o = iTime*1.; // offset
+    
+    for (int i = -n/2; i<n/2; i++){
+        for (int j = -n/2; j<n/2; j++){
+            vec2 q = vec2(i,j);
+            q += 5.*gradient(hash2(q)+iTime/50.);
+            
+            float d = length(p-q);
+            
+            float i = f*d*d/r-o;
+            
+            float falloff = max(0.,r-d);
+            float selective = floor(gradient(q+i)+.9);
+            float a = falloff*selective; //alpha
+            
+            float w = floor(mod(i,1.)*a+.5)*a;
+            s += w;
+        }
+    }
+    return clamp(s,0.,1.);
+}
 vec3 palette(float style)
 {
     style = mod(style,1.);
@@ -219,11 +246,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
-    vec3 col = vec3(.6,.8,.7); // background color
+    vec3 col = vec3(.7,.9,.8); // background color
     float ripple = 0.;
     ripple *= 4.*gradient(uv*2.+iTime*2.);
     uv *= 1.+ripple/64.;
-
+    
     bool shadow = false;
     
     for(int id=0; id<MAX_POPULATION; id++) // front to back
@@ -256,6 +283,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //if(shadow) col *= .9;
 
     uv *= 1.-ripple/12.;
+    
+    col *= 1.+sdRipple(uv)/10.;
     
     fragColor = vec4(col,1);
     
