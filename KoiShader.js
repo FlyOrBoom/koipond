@@ -17,14 +17,15 @@ const fragmentShaderCode = `
     uniform float iTime;
     uniform vec4 kois[${pond.MAX_POPULATION}];
     uniform int population;
+    uniform vec2 ripples[${pond.RIPPLE_COUNT}];
 
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
     const int SEED = ${pond.SEED};
-    const float RIPPLE_DIV = .5;
+    const int RIPPLE_COUNT = ${pond.RIPPLE_COUNT};
+
     const float PI = 3.14159;
     const float TAU = 6.28319;
-    const float BEVEL = .4;
 
     // BEGIN Insert Koi.frag here
     // END
@@ -43,7 +44,8 @@ const handles = {
     resolution: gl.getUniformLocation(program, "iResolution"),
     time: gl.getUniformLocation(program, "iTime"),
     kois: gl.getUniformLocation(program, "kois"),
-    population: gl.getUniformLocation(program, "population")
+    population: gl.getUniformLocation(program, "population"),
+    ripples: gl.getUniformLocation(program, "ripples")
 }
 
 const positionBuffer = gl.createBuffer();
@@ -98,6 +100,7 @@ function render(now) {
     gl.uniform1f(handles.time, time)
     gl.uniform4fv(handles.kois, pond.kois)
     gl.uniform1i(handles.population, pond.population)
+    gl.uniform2fv(handles.ripples, pond.ripples)
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 

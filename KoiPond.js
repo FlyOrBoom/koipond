@@ -1,8 +1,11 @@
 class KoiPond {
     constructor () {
+        this.DIMENSIONS = 2
+
         this.ATTRIBUTES_PER_KOI = 4
         this.MAX_POPULATION = 64
         this.MAX_KOI_SIZE = 0.3
+        this.RIPPLE_COUNT = 6
         this.SEED = Math.round(Math.random()*128)
 
         this.population = 1
@@ -15,6 +18,7 @@ class KoiPond {
                                 case 3: return r
                             }
                         })
+        this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> Math.random()*2-1 )
     }
     add (babies) {
         this.population += babies
