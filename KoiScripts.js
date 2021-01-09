@@ -301,42 +301,9 @@ float sdCircle( vec2 p, float r )
 {
     return length(p) - r;
 }
-
-float sdEllipseBound(vec2 p, vec2 r)
-{
-    return sdCircle(p*vec2(r.y/r.x,1),r.y);
-}
-float sdEllipseApprox(vec2 p, vec2 r) 
-{
-    float k0 = length(p/r);
-    float k1 = length(p/(r*r));
-    return k0*(k0-1.0)/k1;
-}
-float sdParabola( in vec2 pos, in float wi, in float he )
-{
-    pos.x = abs(pos.x);
-
-    float ik = wi*wi/he;
-    float p = ik*(he-pos.y-0.5*ik)/3.0;
-    float q = pos.x*ik*ik*0.25;
-    
-    float h = q*q - p*p*p;
-    float r = sqrt(abs(h));
-
-    float x = (h>0.0) ? 
-        // 1 root
-        pow(q+r,1.0/3.0) - pow(abs(q-r),1.0/3.0)*sign(r-q) :
-        // 3 roots
-        2.0*cos(atan(r/q)/3.0)*sqrt(p);
-    
-    x = min(x,wi);
-    
-    return length(pos-vec2(x,he-x*x/ik)) * 
-           sign(ik*(pos.y-he)+pos.x*pos.x);
-}
 float sdDroplet( vec2 p, float r )
 {
-    return length(p-vec2(0.,r)) - r;
+    return length(p-vec2(0,r)) - r;
 }
 float sdEgg( vec2 p, float r )
 {
@@ -361,7 +328,6 @@ float sdRipple(vec2 p)
     float s = 0.; // sum of heights
     const float f = 32.; // frequency
     const float r = 1.5;
-    int n = 2;
     float o = iTime*1.; // offset
     
     for (int i = 0; i<RIPPLE_COUNT; i++)
@@ -387,33 +353,33 @@ float sdRipple(vec2 p)
 }
 vec3 palette(float style)
 {
-    style = mod(style,10.);
+    float s = mod(style,10.);
     
-    if ( style<1. )
+    if ( s<1. )
         return vec3(.1,.1,.2); // black
 
-    if ( style<2. )
+    if ( s<2. )
         return vec3(.96,.33,.13); // chestnut
 
-    if ( style<3. )
+    if ( s<3. )
         return vec3(.9,.2,.2); // red
         
-    if ( style<4. )
+    if ( s<4. )
         return vec3(.9,.8,.8); // white
         
-    if ( style<5. )
+    if ( s<5. )
         return vec3(.8,.8,.9); //sky
         
-    if ( style<6. )
+    if ( s<6. )
         return vec3(.9,.3,.2); // orange
         
-    if ( style<7. )
+    if ( s<7. )
         return vec3(.9,.6,.7); // pink
         
-    if ( style<8. )
+    if ( s<8. )
         return vec3(.9,.9,.8); // sand
         
-    if ( style<9. )
+    if ( s<9. )
         return vec3(.3,.3,.9); // blue
     
     return vec3(.99,.72,.33); // gold
@@ -426,12 +392,12 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float d = 1.;
     bool shade = false;
 
-    float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
-    float body = 0.50*MAX_KOI_SIZE;
-    float tail = 0.10*MAX_KOI_SIZE;
-    float fins = 0.04*MAX_KOI_SIZE;
-    float eyes = 0.02*MAX_KOI_SIZE;
-    vec2 v = vec2(0,1);
+    const float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
+    const float body = 0.50*MAX_KOI_SIZE;
+    const float tail = 0.10*MAX_KOI_SIZE;
+    const float fins = 0.04*MAX_KOI_SIZE;
+    const float eyes = 0.02*MAX_KOI_SIZE;
+    const vec2 v = vec2(0,1);
 
     p *= ro;
     float dx = sin(4.*(iTime+style)+p.y*4.);
@@ -446,7 +412,7 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
 
     if( d<0. ){
-        vec2 q = (p+hash(style))/MAX_KOI_SIZE;
+        vec2 q = (p+style/10.)/MAX_KOI_SIZE;
         float t = 0.; // threshold
         t = min(1.,(p.y-body*.9)*16.); // keep out of tail
         t = max(t,min(1.,-d/r/16.)); // keep near edge
@@ -478,9 +444,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
     vec3 col = vec3(.7,.9,.8); // background color
-            
-    bool shadow = false;
-    
+                
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
         if(id==population) break;
