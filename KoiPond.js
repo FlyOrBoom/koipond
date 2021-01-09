@@ -2,11 +2,13 @@ class KoiPond {
     constructor () {
         this.DIMENSIONS = 2
 
-        this.ATTRIBUTES_PER_KOI = 4
+        this.ATTRIBUTES_PER_KOI = this.DIMENSIONS + 2
         this.MAX_POPULATION = 64
         this.MAX_KOI_SIZE = 0.3
         this.RIPPLE_COUNT = 6
         this.SEED = Math.round(Math.random()*128)
+
+        this.SPEED = 4e-3
 
         this.population = 1
         this.kois = new Float32Array(this.MAX_POPULATION*this.ATTRIBUTES_PER_KOI)
@@ -31,13 +33,13 @@ class KoiPond {
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
             
-            const [n,dn] = noise(time/500+style*100);
+            const [n,dn] = noise(time*this.SPEED+style*100);
             
-            theta = n*Math.PI;
+            theta = n*Math.PI
 	    
             const bimodal = normal(dn/100+1)+normal(dn/100-1) // Move fastest when rotating slightly
-            x -= Math.cos(theta+Math.PI/2)/100*bimodal
-            y += Math.sin(theta+Math.PI/2)/100*bimodal
+            x -= Math.cos(theta+Math.PI/2)*this.SPEED*bimodal
+            y += Math.sin(theta+Math.PI/2)*this.SPEED*bimodal
 
             this.kois[ID+0] = torus(x,1)
             this.kois[ID+1] = torus(y,1)
