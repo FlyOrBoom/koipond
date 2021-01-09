@@ -138,13 +138,14 @@ float sdRipple(vec2 p)
         if(d>r) continue;
 
         float x = f*d*d/r-o;
-
         float falloff = r-d;
-        float selective = floor(gradient(q+x)+.9);
-        float a = falloff*selective; //alpha
+        float w = mod(x,1.)*falloff;        
+        
+        if(w<.5) continue;
 
-        float w = floor(mod(x,1.)*a+.5)*a;
-        s += w;
+        float selective = floor(gradient(q+x)+.9);
+        float h = floor(w*selective+.5)*falloff;
+        s += h;
     }
     
     return clamp(s,0.,1.);
