@@ -467,11 +467,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
         
     col *= 1.+sdRipple(uv)/10.;
-    col = vec3(gradient(uv));
                 
     fragColor = vec4(col,1);
     
-}    // END
+}
+    // END
 
     void main() {
       mainImage(gl_FragColor, gl_FragCoord.xy);
