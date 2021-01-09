@@ -4,6 +4,15 @@ const debug = document.querySelector("div")
 const gl = canvas.getContext("webgl")
 const pond = new KoiPond()
 
+const gradient = gl.createTexture()
+const gradient_png = new Image()
+gradient_png.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D,gradient)
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,gradient_png)
+    gl.generateMipmap(gl.TEXTURE_2D)
+}
+gradient_png.src = "gradient.png"
+
 const vertexShaderCode = `
     attribute vec4 vPosition;
     void main() {
@@ -13,11 +22,14 @@ const vertexShaderCode = `
 
 const fragmentShaderCode = `
     precision mediump float;
+
     uniform vec2 iResolution;
     uniform float iTime;
     uniform vec4 kois[${pond.MAX_POPULATION}];
     uniform int population;
     uniform vec2 ripples[${pond.RIPPLE_COUNT}];
+
+    uniform sampler2D gradientSampler;
 
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
@@ -45,7 +57,8 @@ const handles = {
     time: gl.getUniformLocation(program, "iTime"),
     kois: gl.getUniformLocation(program, "kois"),
     population: gl.getUniformLocation(program, "population"),
-    ripples: gl.getUniformLocation(program, "ripples")
+    ripples: gl.getUniformLocation(program, "ripples"),
+    gradientSampler: gl.getUniformLocation(program, "gradientSampler")
 }
 
 const positionBuffer = gl.createBuffer();
@@ -101,6 +114,10 @@ function render(now) {
     gl.uniform4fv(handles.kois, pond.kois)
     gl.uniform1i(handles.population, pond.population)
     gl.uniform2fv(handles.ripples, pond.ripples)
+
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D,gradient)
+    gl.uniform1i(handles.gradientSampler,0)
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 

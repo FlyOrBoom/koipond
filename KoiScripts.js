@@ -17,7 +17,7 @@ class KoiPond {
                             switch( index%4 ){
                                 case 0: case 1: return r*2-1
                                 case 2: return r*2*Math.PI
-                                case 3: return r
+                                case 3: return r*10
                             }
                         })
         this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> Math.random()*2-1 )
@@ -209,6 +209,15 @@ const debug = document.querySelector("div")
 const gl = canvas.getContext("webgl")
 const pond = new KoiPond()
 
+const gradient = gl.createTexture()
+const gradient_png = new Image()
+gradient_png.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D,gradient)
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,gradient_png)
+    gl.generateMipmap(gl.TEXTURE_2D)
+}
+gradient_png.src = "gradient.png"
+
 const vertexShaderCode = `
     attribute vec4 vPosition;
     void main() {
@@ -218,11 +227,14 @@ const vertexShaderCode = `
 
 const fragmentShaderCode = `
     precision mediump float;
+
     uniform vec2 iResolution;
     uniform float iTime;
     uniform vec4 kois[${pond.MAX_POPULATION}];
     uniform int population;
     uniform vec2 ripples[${pond.RIPPLE_COUNT}];
+
+    uniform sampler2D gradientSampler;
 
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
@@ -270,74 +282,24 @@ highp float hash(highp vec2 p)
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
 }
-vec2 hash2(vec2 p)
+
+float gradient(vec2 p)
 {
-	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xx+p3.yz)*p3.zy);
+    return texture2D(gradientSampler,mod(p,1.)+.5).r-.5;
 }
 
-
-//-- NOISE
-float gradient( vec2 p )
+float skin(vec2 p)
 {
-    vec2 i = floor( p );
-    vec2 f = fract( p );
-	
-	vec2 u = f*f*(3.0-2.0*f);
-
-    return mix( mix( dot( hash2( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ), 
-                     dot( hash2( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
-                mix( dot( hash2( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ), 
-                     dot( hash2( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
-}
-
-float skin(vec2 p, float style)
-{
-    float r = hash(style);
-    return gradient(p+r*100.);
+    return gradient(p);
 }
 //-- DISTANCE FUNCTIONS
 float sdCircle( vec2 p, float r )
 {
     return length(p) - r;
 }
-
-float sdEllipseBound(vec2 p, vec2 r)
-{
-    return sdCircle(p*vec2(r.y/r.x,1),r.y);
-}
-float sdEllipseApprox(vec2 p, vec2 r) 
-{
-    float k0 = length(p/r);
-    float k1 = length(p/(r*r));
-    return k0*(k0-1.0)/k1;
-}
-float sdParabola( in vec2 pos, in float wi, in float he )
-{
-    pos.x = abs(pos.x);
-
-    float ik = wi*wi/he;
-    float p = ik*(he-pos.y-0.5*ik)/3.0;
-    float q = pos.x*ik*ik*0.25;
-    
-    float h = q*q - p*p*p;
-    float r = sqrt(abs(h));
-
-    float x = (h>0.0) ? 
-        // 1 root
-        pow(q+r,1.0/3.0) - pow(abs(q-r),1.0/3.0)*sign(r-q) :
-        // 3 roots
-        2.0*cos(atan(r/q)/3.0)*sqrt(p);
-    
-    x = min(x,wi);
-    
-    return length(pos-vec2(x,he-x*x/ik)) * 
-           sign(ik*(pos.y-he)+pos.x*pos.x);
-}
 float sdDroplet( vec2 p, float r )
 {
-    return length(p-vec2(0.,r)) - r;
+    return length(p-vec2(0,r)) - r;
 }
 float sdEgg( vec2 p, float r )
 {
@@ -352,7 +314,7 @@ float sdFins(vec2 p, float r, float size)
     float side = sign(p.x)*PI/2.;
     p.x = abs(p.x)-r/2.-size*3.;
     return smin(
-        sdCircle(p-vec2(0,cos(2.*iTime+p.y*8.+side)/8.-r/8.)/4.,size/2.),
+        sdCircle(p-vec2(0,cos(4.*iTime+p.y*8.+side)/8.-r/8.)/4.,size/2.),
         sdCircle(p,size),
         r
     );
@@ -362,58 +324,58 @@ float sdRipple(vec2 p)
     float s = 0.; // sum of heights
     const float f = 32.; // frequency
     const float r = 1.5;
-    int n = 2;
     float o = iTime*1.; // offset
     
-    for (int j = 0; j<RIPPLE_COUNT; j++)
+    for (int i = 0; i<RIPPLE_COUNT; i++)
     {
-        vec2 q = ripples[j];
+        vec2 q = ripples[i];
 
         float d = length(p-q);
 
         if(d>r) continue;
 
-        float i = f*d*d/r-o;
+        float x = f*d*d/r-o;
+        float falloff = r-d;
+        float w = mod(x,1.)*falloff;        
+        
+        if(w<.5) continue;
 
-        float falloff = max(0.,r-d);
-        float selective = floor(gradient(q+i)+.9);
-        float a = falloff*selective; //alpha
-
-        float w = floor(mod(i,1.)*a+.5)*a;
-        s += w;
+        float selective = floor(gradient(q+x)+.9);
+        float h = floor(w*selective+.5)*falloff;
+        s += h;
     }
     
     return clamp(s,0.,1.);
 }
 vec3 palette(float style)
 {
-    style = mod(style,1.);
+    float s = mod(style,10.);
     
-    if ( style<.1 )
+    if ( s<1. )
         return vec3(.1,.1,.2); // black
 
-    if ( style<.2 )
+    if ( s<2. )
         return vec3(.96,.33,.13); // chestnut
 
-    if ( style<.3 )
+    if ( s<3. )
         return vec3(.9,.2,.2); // red
         
-    if ( style<.4 )
+    if ( s<4. )
         return vec3(.9,.8,.8); // white
         
-    if ( style<.5 )
+    if ( s<5. )
         return vec3(.8,.8,.9); //sky
         
-    if ( style<.6 )
+    if ( s<6. )
         return vec3(.9,.3,.2); // orange
         
-    if ( style<.7 )
+    if ( s<7. )
         return vec3(.9,.6,.7); // pink
         
-    if ( style<.8 )
+    if ( s<8. )
         return vec3(.9,.9,.8); // sand
         
-    if ( style<.9 )
+    if ( s<9. )
         return vec3(.3,.3,.9); // blue
     
     return vec3(.99,.72,.33); // gold
@@ -426,15 +388,15 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float d = 1.;
     bool shade = false;
 
-    float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
-    float body = 0.50*MAX_KOI_SIZE;
-    float tail = 0.10*MAX_KOI_SIZE;
-    float fins = 0.04*MAX_KOI_SIZE;
-    float eyes = 0.02*MAX_KOI_SIZE;
-    vec2 v = vec2(0,1);
+    const float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
+    const float body = 0.50*MAX_KOI_SIZE;
+    const float tail = 0.10*MAX_KOI_SIZE;
+    const float fins = 0.04*MAX_KOI_SIZE;
+    const float eyes = 0.02*MAX_KOI_SIZE;
+    const vec2 v = vec2(0,1);
 
     p *= ro;
-    float dx = sin(2.*(iTime+style)+p.y*4.);
+    float dx = sin(4.*(iTime+style)+p.y*4.);
     dx /= 8.;
     dx *= p.y;
     p.x += dx;
@@ -446,18 +408,18 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
 
     if( d<0. ){
-        vec2 q = (p+style)/MAX_KOI_SIZE;
+        vec2 q = (p+fract(style))/MAX_KOI_SIZE;
         float t = 0.; // threshold
         t = min(1.,(p.y-body*.9)*16.); // keep out of tail
         t = max(t,min(1.,-d/r/16.)); // keep near edge
 
-        float s1 = skin(4.*q-9.,style);
-        float s2 = skin(8.*q+9.,style)*max(0.,s1+0.1);
+        float s1 = skin(4.*q-9.);
+        float s2 = skin(8.*q+9.)*max(0.,s1+0.1);
         if(s1>t)
-            col = mix(col,palette(style+.2),.8);
+            col = mix(col,palette(style+2.),.8);
             
         if(s2>t)
-            col = mix(col,palette(style-.2),.8);
+            col = mix(col,palette(style-2.),.8);
     }
     
     if(sdEyes<eyes) col = vec3(0);
@@ -478,9 +440,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
     vec3 col = vec3(.7,.9,.8); // background color
-            
-    bool shadow = false;
-    
+                
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
         if(id==population) break;
@@ -504,14 +464,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             break;
         }
         
-        
-        //shadow = shadow || sdKoi(p-uv/16.,ro,style).x<0.;
     }
-    
-    //if(shadow) col *= .9;
-    
-    col *= 1.+sdRipple(uv)/10.;
         
+    col *= 1.+sdRipple(uv)/10.;
+    col = vec3(gradient(uv));
+                
     fragColor = vec4(col,1);
     
 }    // END
@@ -531,7 +488,8 @@ const handles = {
     time: gl.getUniformLocation(program, "iTime"),
     kois: gl.getUniformLocation(program, "kois"),
     population: gl.getUniformLocation(program, "population"),
-    ripples: gl.getUniformLocation(program, "ripples")
+    ripples: gl.getUniformLocation(program, "ripples"),
+    gradientSampler: gl.getUniformLocation(program, "gradientSampler")
 }
 
 const positionBuffer = gl.createBuffer();
@@ -587,6 +545,10 @@ function render(now) {
     gl.uniform4fv(handles.kois, pond.kois)
     gl.uniform1i(handles.population, pond.population)
     gl.uniform2fv(handles.ripples, pond.ripples)
+
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D,gradient)
+    gl.uniform1i(handles.gradientSampler,0)
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 
