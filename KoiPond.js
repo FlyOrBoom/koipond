@@ -17,7 +17,7 @@ class KoiPond {
                             switch( index%4 ){
                                 case 0: case 1: return r*2-1
                                 case 2: return r*2*Math.PI
-                                case 3: return r
+                                case 3: return r*10
                             }
                         })
         this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> Math.random()*2-1 )

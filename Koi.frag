@@ -51,16 +51,15 @@ float gradient( vec2 p )
 	
 	vec2 u = f*f*(3.0-2.0*f);
 
-    return mix( mix( dot( hash2( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ), 
-                     dot( hash2( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
-                mix( dot( hash2( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ), 
-                     dot( hash2( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+    return mix( mix( dot( hash2( i + vec2(0,0) ), f - vec2(0,0) ), 
+                     dot( hash2( i + vec2(1,0) ), f - vec2(1,0) ), u.x),
+                mix( dot( hash2( i + vec2(0,1) ), f - vec2(0,1) ), 
+                     dot( hash2( i + vec2(1,1) ), f - vec2(1,1) ), u.x), u.y);
 }
 
-float skin(vec2 p, float style)
+float skin(vec2 p)
 {
-    float r = hash(style);
-    return gradient(p+r*100.);
+    return gradient(p);
 }
 //-- DISTANCE FUNCTIONS
 float sdCircle( vec2 p, float r )
@@ -117,7 +116,7 @@ float sdFins(vec2 p, float r, float size)
     float side = sign(p.x)*PI/2.;
     p.x = abs(p.x)-r/2.-size*3.;
     return smin(
-        sdCircle(p-vec2(0,cos(2.*iTime+p.y*8.+side)/8.-r/8.)/4.,size/2.),
+        sdCircle(p-vec2(0,cos(4.*iTime+p.y*8.+side)/8.-r/8.)/4.,size/2.),
         sdCircle(p,size),
         r
     );
@@ -130,21 +129,21 @@ float sdRipple(vec2 p)
     int n = 2;
     float o = iTime*1.; // offset
     
-    for (int j = 0; j<RIPPLE_COUNT; j++)
+    for (int i = 0; i<RIPPLE_COUNT; i++)
     {
-        vec2 q = ripples[j];
+        vec2 q = ripples[i];
 
         float d = length(p-q);
 
         if(d>r) continue;
 
-        float i = f*d*d/r-o;
+        float x = f*d*d/r-o;
 
-        float falloff = max(0.,r-d);
-        float selective = floor(gradient(q+i)+.9);
+        float falloff = r-d;
+        float selective = floor(gradient(q+x)+.9);
         float a = falloff*selective; //alpha
 
-        float w = floor(mod(i,1.)*a+.5)*a;
+        float w = floor(mod(x,1.)*a+.5)*a;
         s += w;
     }
     
@@ -152,33 +151,33 @@ float sdRipple(vec2 p)
 }
 vec3 palette(float style)
 {
-    style = mod(style,1.);
+    style = mod(style,10.);
     
-    if ( style<.1 )
+    if ( style<1. )
         return vec3(.1,.1,.2); // black
 
-    if ( style<.2 )
+    if ( style<2. )
         return vec3(.96,.33,.13); // chestnut
 
-    if ( style<.3 )
+    if ( style<3. )
         return vec3(.9,.2,.2); // red
         
-    if ( style<.4 )
+    if ( style<4. )
         return vec3(.9,.8,.8); // white
         
-    if ( style<.5 )
+    if ( style<5. )
         return vec3(.8,.8,.9); //sky
         
-    if ( style<.6 )
+    if ( style<6. )
         return vec3(.9,.3,.2); // orange
         
-    if ( style<.7 )
+    if ( style<7. )
         return vec3(.9,.6,.7); // pink
         
-    if ( style<.8 )
+    if ( style<8. )
         return vec3(.9,.9,.8); // sand
         
-    if ( style<.9 )
+    if ( style<9. )
         return vec3(.3,.3,.9); // blue
     
     return vec3(.99,.72,.33); // gold
@@ -199,7 +198,7 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     vec2 v = vec2(0,1);
 
     p *= ro;
-    float dx = sin(2.*(iTime+style)+p.y*4.);
+    float dx = sin(4.*(iTime+style)+p.y*4.);
     dx /= 8.;
     dx *= p.y;
     p.x += dx;
@@ -211,18 +210,18 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
 
     if( d<0. ){
-        vec2 q = (p+style)/MAX_KOI_SIZE;
+        vec2 q = (p+hash(style))/MAX_KOI_SIZE;
         float t = 0.; // threshold
         t = min(1.,(p.y-body*.9)*16.); // keep out of tail
         t = max(t,min(1.,-d/r/16.)); // keep near edge
 
-        float s1 = skin(4.*q-9.,style);
-        float s2 = skin(8.*q+9.,style)*max(0.,s1+0.1);
+        float s1 = skin(4.*q-9.);
+        float s2 = skin(8.*q+9.)*max(0.,s1+0.1);
         if(s1>t)
-            col = mix(col,palette(style+.2),.8);
+            col = mix(col,palette(style+2.),.8);
             
         if(s2>t)
-            col = mix(col,palette(style-.2),.8);
+            col = mix(col,palette(style-2.),.8);
     }
     
     if(sdEyes<eyes) col = vec3(0);
@@ -269,12 +268,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             break;
         }
         
-        
-        //shadow = shadow || sdKoi(p-uv/16.,ro,style).x<0.;
     }
-    
-    //if(shadow) col *= .9;
-    
+        
     col *= 1.+sdRipple(uv)/10.;
         
     fragColor = vec4(col,1);
