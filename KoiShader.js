@@ -1,8 +1,11 @@
 const canvas = document.querySelector("canvas")
+const svg = document.querySelector("svg")
 const timeSamples = Array(32)
 const debug = document.querySelector("div")
 const gl = canvas.getContext("webgl")
 const pond = new KoiPond()
+const overlay = new KoiOverlay()
+pond.background = "hsl(200deg,50%,90%)"
 
 const gradient = gl.createTexture()
 const gradient_png = new Image()
@@ -94,6 +97,11 @@ let then = 0
 let time = 0
 let running = false
 
+function prerender(){
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D,gradient)
+    gl.uniform1i(handles.gradientSampler,0)
+}
 function render(now) {
     now *= 0.001 // convert to seconds
     const delta = Math.min(now - then, 0.1)
@@ -115,10 +123,6 @@ function render(now) {
     gl.uniform1i(handles.population, pond.population)
     gl.uniform2fv(handles.ripples, pond.ripples)
 
-    gl.activeTexture(gl.TEXTURE0)
-    gl.bindTexture(gl.TEXTURE_2D,gradient)
-    gl.uniform1i(handles.gradientSampler,0)
-
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 
     if(running) requestAnimationFrame(render)
@@ -130,9 +134,12 @@ function stop () {
 function start () {
     if(running) return
     running = true
+    prerender()
     requestAnimationFrame(render)
 }
+
 start()
+overlay.render()
 
 function resize () {
     resizeCanvasToDisplaySize(gl.canvas, 1.0)

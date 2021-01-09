@@ -8,10 +8,17 @@
               height: 100%;
             }
             body{
-              background: #809980;
               display: flex;
               justify-content: center;
               align-items: center;
+            }
+            svg,canvas{
+              position:fixed;
+            }
+            svg{
+              width: 100%;
+              height: 100%;
+              opacity: 0.1;
             }
             canvas{
               width: 100vmin;
@@ -28,6 +35,27 @@
     </head>
     <body>
         <canvas></canvas>
+        <svg viewBox='0 0 1 1'>
+          <style>
+circle{
+  fill: transparent;
+  stroke: black;
+  animation: 2s expand ease-out;
+}
+@keyframes expand{
+  from{
+    r:0px;
+    stroke-width:0.05px;
+    opacity:1;
+  }
+  to{
+    r:.5px;
+    stroke-width:0px;
+    opacity:0;
+  }
+}
+          </style>
+        </svg>
         <div>? fps</div>
     </body>
     <script src='KoiScripts.js'></script>

@@ -20,49 +20,48 @@ class KoiPond {
                                 case 3: return r*10
                             }
                         })
-        this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> Math.random()*2-1 )
+        this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> (Math.random()*2-1))
     }
     add (babies) {
         this.population += babies
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }
-    update (time, delta) {
+    update (time) {
         for (let i = 0; i < this.population; i++) {
 
             const ID = i*this.ATTRIBUTES_PER_KOI
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
             
-            const [n,dn] = noise(time*this.SPEED+style*100);
+            const [n,dn] = this.noise(time*this.SPEED+style*100);
             
             theta = n*Math.PI
 	    
-            const bimodal = normal(dn/100+1)+normal(dn/100-1) // Move fastest when rotating slightly
+            const bimodal = this.normal(dn/100+1)+this.normal(dn/100-1) // Move fastest when rotating slightly
             x -= Math.cos(theta+Math.PI/2)*this.SPEED*bimodal
             y += Math.sin(theta+Math.PI/2)*this.SPEED*bimodal
 
-            this.kois[ID+0] = torus(x,1)
-            this.kois[ID+1] = torus(y,1)
-            this.kois[ID+2] = mod(theta,2*Math.PI)
+            this.kois[ID+0] = this.torus(x,1)
+            this.kois[ID+1] = this.torus(y,1)
+            this.kois[ID+2] = this.mod(theta,2*Math.PI)
             this.kois[ID+3] = style
         }
     }
-}
-function mod(a,b){
-    return a-b*Math.floor(a/b)
-}
-function torus(a,b){
-    return mod(a-b,2*b)-b
-}
-function normal(a){
-    return Math.exp(-a*a)
-}
-function noise(x){
-    let y = 0, dy = 0
-    for(let i = 0; i<5; i+=0.5){
-        const e = Math.exp(i)
-    	y += Math.sin(x*e)
-        dy += e*Math.cos(x*e)
+    mod = (a,b) => a-b*Math.floor(a/b)
+    torus = (a,b) => this.mod(a-b,2*b)-b
+    normal = (a) => Math.exp(-a*a)
+
+    noise(x){
+        let y = 0, dy = 0
+        for(let i = 0; i<5; i+=0.5){
+            const e = Math.exp(i)
+            y += Math.sin(x*e)
+            dy += e*Math.cos(x*e)
+        }
+        return [y,dy]
     }
-    return [y,dy]
+
+    set background(color){
+        document.body.style.background = color
+    }
 }

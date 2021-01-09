@@ -21,29 +21,9 @@ mat2 rot(float theta)
     return mat2(x,-y,y,x);
 }
 
-//-- HASH
-float hash(float p)
-{
-    p = fract(p * .1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
-}
-highp float hash(highp vec2 p)
-{
-    vec3 p3 = fract(vec3(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-}
-
 float gradient(vec2 p)
 {
-    return texture2D(gradientSampler,mod(p,1.)+.5).r-.5;
-}
-
-float skin(vec2 p)
-{
-    return gradient(p);
+    return texture2D(gradientSampler,p-.5).r-.5;
 }
 //-- DISTANCE FUNCTIONS
 float sdCircle( vec2 p, float r )
@@ -71,34 +51,6 @@ float sdFins(vec2 p, float r, float size)
         sdCircle(p,size),
         r
     );
-}
-float sdRipple(vec2 p)
-{
-    float s = 0.; // sum of heights
-    const float f = 32.; // frequency
-    const float r = 1.5;
-    float o = iTime*1.; // offset
-    
-    for (int i = 0; i<RIPPLE_COUNT; i++)
-    {
-        vec2 q = ripples[i];
-
-        float d = length(p-q);
-
-        if(d>r) continue;
-
-        float x = f*d*d/r-o;
-        float falloff = r-d;
-        float w = mod(x,1.)*falloff;        
-        
-        if(w<.5) continue;
-
-        float selective = floor(gradient(q+x)+.9);
-        float h = floor(w*selective+.5)*falloff;
-        s += h;
-    }
-    
-    return clamp(s,0.,1.);
 }
 vec3 palette(float style)
 {
@@ -160,22 +112,22 @@ vec4 Koi(vec2 p,mat2 ro,float style)
 
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
 
-    if( d<0. ){
+    {
         vec2 q = (p+fract(style))/MAX_KOI_SIZE;
         float t = 0.; // threshold
         t = min(1.,(p.y-body*.9)*16.); // keep out of tail
         t = max(t,min(1.,-d/r/16.)); // keep near edge
 
-        float s1 = skin(4.*q-9.);
-        float s2 = skin(8.*q+9.)*max(0.,s1+0.1);
+        float s1 = gradient(q/1.);
+        float s2 = gradient(q/4.)*max(0.,s1+0.1);
         if(s1>t)
             col = mix(col,palette(style+2.),.8);
             
         if(s2>t)
             col = mix(col,palette(style-2.),.8);
+        
+        if(sdEyes<eyes) col = vec3(0);
     }
-    
-    if(sdEyes<eyes) col = vec3(0);
 
     float f = sdFins(p,r,fins);
 
@@ -192,7 +144,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
-    vec3 col = vec3(.7,.9,.8); // background color
+    fragColor = vec4(0);
                 
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
@@ -213,15 +165,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         if(koiCol.a<0.) // if within koi use its color
         {
-            col = koiCol.rgb;
-            break;
+            fragColor = vec4(koiCol.rgb,1);
+            return;
         }
         
     }
         
-    col *= 1.+sdRipple(uv)/10.;
-    col = vec3(gradient(uv));
-                
-    fragColor = vec4(col,1);
-    
 }
