@@ -1,8 +1,11 @@
 class KoiPond {
     constructor () {
+        this.DIMENSIONS = 2
+
         this.ATTRIBUTES_PER_KOI = 4
         this.MAX_POPULATION = 64
         this.MAX_KOI_SIZE = 0.3
+        this.RIPPLE_COUNT = 6
         this.SEED = Math.round(Math.random()*128)
 
         this.population = 1
@@ -15,6 +18,7 @@ class KoiPond {
                                 case 3: return r
                             }
                         })
+        this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> Math.random()*2-1 )
     }
     add (babies) {
         this.population += babies
@@ -216,14 +220,15 @@ const fragmentShaderCode = `
     uniform float iTime;
     uniform vec4 kois[${pond.MAX_POPULATION}];
     uniform int population;
+    uniform vec2 ripples[${pond.RIPPLE_COUNT}];
 
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
     const int SEED = ${pond.SEED};
-    const float RIPPLE_DIV = .5;
+    const int RIPPLE_COUNT = ${pond.RIPPLE_COUNT};
+
     const float PI = 3.14159;
     const float TAU = 6.28319;
-    const float BEVEL = .4;
 
     // BEGIN Insert Koi.frag here
 /* 
@@ -268,12 +273,11 @@ vec2 hash2(vec2 p)
 	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
     p3 += dot(p3, p3.yzx+33.33);
     return fract((p3.xx+p3.yz)*p3.zy);
-
 }
 
 
 //-- NOISE
-float gradient( in vec2 p )
+float gradient( vec2 p )
 {
     vec2 i = floor( p );
     vec2 f = fract( p );
@@ -329,10 +333,6 @@ float sdParabola( in vec2 pos, in float wi, in float he )
     return length(pos-vec2(x,he-x*x/ik)) * 
            sign(ik*(pos.y-he)+pos.x*pos.x);
 }
-float sdVesica(vec2 p, float r, float d)
-{
-    return length(abs(p)-vec2(-d,0))-r;
-}
 float sdDroplet( vec2 p, float r )
 {
     return length(p-vec2(0.,r)) - r;
@@ -359,27 +359,28 @@ float sdRipple(vec2 p)
 {
     float s = 0.; // sum of heights
     const float f = 32.; // frequency
-    const int n = 2;
     const float r = 1.5;
+    int n = 2;
     float o = iTime*1.; // offset
     
-    for (int i = -n/2; i<n/2; i++){
-        for (int j = -n/2; j<n/2; j++){
-            vec2 q = vec2(i,j);
-            q += 5.*gradient(hash2(q)+iTime/50.);
-            
-            float d = length(p-q);
-            
-            float i = f*d*d/r-o;
-            
-            float falloff = max(0.,r-d);
-            float selective = floor(gradient(q+i)+.9);
-            float a = falloff*selective; //alpha
-            
-            float w = floor(mod(i,1.)*a+.5)*a;
-            s += w;
-        }
+    for (int j = 0; j<RIPPLE_COUNT; j++)
+    {
+        vec2 q = ripples[j];
+
+        float d = length(p-q);
+
+        if(d>r) continue;
+
+        float i = f*d*d/r-o;
+
+        float falloff = max(0.,r-d);
+        float selective = floor(gradient(q+i)+.9);
+        float a = falloff*selective; //alpha
+
+        float w = floor(mod(i,1.)*a+.5)*a;
+        s += w;
     }
+    
     return clamp(s,0.,1.);
 }
 vec3 palette(float style)
@@ -475,10 +476,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
     vec3 col = vec3(.7,.9,.8); // background color
-    float ripple = 0.;
-    ripple *= 4.*gradient(uv*2.+iTime*2.);
-    uv *= 1.+ripple/64.;
-    
+            
     bool shadow = false;
     
     for(int id=0; id<MAX_POPULATION; id++) // front to back
@@ -509,15 +507,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     //if(shadow) col *= .9;
-
-    uv *= 1.-ripple/12.;
     
     col *= 1.+sdRipple(uv)/10.;
-    
+        
     fragColor = vec4(col,1);
     
-}
-    // END
+}    // END
 
     void main() {
       mainImage(gl_FragColor, gl_FragCoord.xy);
@@ -533,7 +528,8 @@ const handles = {
     resolution: gl.getUniformLocation(program, "iResolution"),
     time: gl.getUniformLocation(program, "iTime"),
     kois: gl.getUniformLocation(program, "kois"),
-    population: gl.getUniformLocation(program, "population")
+    population: gl.getUniformLocation(program, "population"),
+    ripples: gl.getUniformLocation(program, "ripples")
 }
 
 const positionBuffer = gl.createBuffer();
@@ -588,6 +584,7 @@ function render(now) {
     gl.uniform1f(handles.time, time)
     gl.uniform4fv(handles.kois, pond.kois)
     gl.uniform1i(handles.population, pond.population)
+    gl.uniform2fv(handles.ripples, pond.ripples)
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 
