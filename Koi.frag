@@ -93,11 +93,12 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float d = 1.;
     bool shade = false;
 
-    const float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
-    const float body = 0.50*MAX_KOI_SIZE;
-    const float tail = 0.10*MAX_KOI_SIZE;
-    const float fins = 0.04*MAX_KOI_SIZE;
-    const float eyes = 0.02*MAX_KOI_SIZE;
+    float R = MAX_KOI_SIZE / (1.+fract(style)/4.);
+    float r =    0.20*R; // length of koi's semi-minor axis
+    float body = 0.50*R;
+    float tail = 0.10*R;
+    float fins = 0.04*R;
+    float eyes = 0.02*R;
     const vec2 v = vec2(0,1);
 
     p *= ro;

@@ -1,11 +1,5 @@
-const canvas = document.querySelector("canvas")
-const svg = document.querySelector("svg")
+
 const timeSamples = Array(32)
-const debug = document.querySelector("div")
-const gl = canvas.getContext("webgl")
-const pond = new KoiPond()
-const overlay = new KoiOverlay()
-pond.background = "hsl(200deg,50%,90%)"
 
 const gradient = gl.createTexture()
 const gradient_png = new Image()
@@ -16,14 +10,14 @@ gradient_png.onload = () => {
 }
 gradient_png.src = "gradient.png"
 
-const vertexShaderCode = `
+const vert = `
     attribute vec4 vPosition;
     void main() {
       gl_Position = vPosition;
     }
 `
 
-const fragmentShaderCode = `
+const frag = `
     precision mediump float;
 
     uniform vec2 iResolution;
@@ -51,7 +45,7 @@ const fragmentShaderCode = `
 `
 
 // setup GLSL program
-const program = createProgramFromSources(gl, [vertexShaderCode, fragmentShaderCode])
+const program = createProgramFromSources(gl, [vert, frag])
 
 // look up where the vertex data needs to go.
 const handles = {
@@ -139,7 +133,6 @@ function start () {
 }
 
 start()
-overlay.render()
 
 function resize () {
     resizeCanvasToDisplaySize(gl.canvas, 1.0)

@@ -16,9 +16,13 @@
               position:fixed;
             }
             svg{
-              width: 100%;
-              height: 100%;
-              opacity: 0.1;
+              width: 300vmin;
+              height: 100vmin;
+            }
+            @media (max-aspect-ratio:1/1){
+              svg{
+                transform: rotate(90deg);
+              }
             }
             canvas{
               width: 100vmin;
@@ -35,9 +39,9 @@
     </head>
     <body>
         <canvas></canvas>
-        <svg viewBox='0 0 1 1'>
+        <svg viewBox='-3 -1 6 2'>
           <style>
-circle{
+.ripple{
   fill: transparent;
   stroke: black;
   animation: 2s expand ease-out;
@@ -46,7 +50,7 @@ circle{
   from{
     r:0px;
     stroke-width:0.05px;
-    opacity:1;
+    opacity:3%;
   }
   to{
     r:.5px;
@@ -54,7 +58,14 @@ circle{
     opacity:0;
   }
 }
+.lilypad{
+  fill:rgb(58, 252, 145);
+  stroke:rgb(42, 211, 118);
+  stroke-width:0.02px;
+}
           </style>
+          <g id='ripples'></g>
+          <g id='lilypads'></g>
         </svg>
         <div>? fps</div>
     </body>
