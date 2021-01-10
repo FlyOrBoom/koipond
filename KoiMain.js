@@ -7,6 +7,6 @@ const gl = canvas.getContext("webgl")
 const pond = new KoiPond()
 const overlay = new KoiOverlay()
 
-pond.background = "hsl(200deg,50%,90%)"
+pond.background = "hsl(150deg,50%,80%)"
 
 overlay.render()

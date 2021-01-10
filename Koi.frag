@@ -86,12 +86,14 @@ vec3 palette(float style)
     return vec3(.99,.72,.33); // gold
     
 }
-vec4 Koi(vec2 p,mat2 ro,float style)
+vec4 Koi(vec4 koi)
 {    
+    vec2 p = koi.xy*rot(koi.z);
+    float style = koi.w;
+
     vec3 col = palette(style);
 
     float d = 1.;
-    bool shade = false;
 
     float R = MAX_KOI_SIZE / (1.+fract(style)/4.);
     float r =    0.20*R; // length of koi's semi-minor axis
@@ -101,15 +103,21 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float eyes = 0.02*R;
     const vec2 v = vec2(0,1);
 
-    p *= ro;
     float dx = sin(4.*(iTime+style)+p.y*4.);
     dx /= 8.;
     dx *= p.y;
     p.x += dx;
 
     d = sdEgg(p,r); // body
-    d = smin(d,sdCircle(p+r*v,r/2.),1.5*r);
-    d = smin(d,sdDroplet(p-(body+tail/2.)*v,tail),2.1*r);
+    d = smin(d,sdCircle(p+r*v,r/2.),1.5*r); // head
+    d = smin(d,sdDroplet(p-(body+tail/2.)*v,tail),2.1*r); // tail
+    
+    for(float i = 0.; i<5.; i++){
+        vec2 q = p;
+        q.y += sin(iTime*PHI-(i+style)/PHI)*tail;
+        q.x += sin(iTime/PHI+(i+style)*PHI)*tail;
+        d = smin(d,sdCircle(q-(body+tail*2.)*v,0.3*r),0.5*r);
+    }
 
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
 
@@ -146,23 +154,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
     fragColor = vec4(0);
-                
+
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
         if(id==population) break;
 
         vec4 koi = kois[id];
         
-        vec2 p = koi.xy;
-        mat2 ro = rot(koi.z);
-        float style = koi.w;
+        koi.xy += uv;
      
-        p += uv;
-        p = mod(p-1.,2.)-1.; // tile
+        koi.xy = mod(koi.xy-1.,2.)-1.; // tile
         
-        if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
+        if(length(koi.xy)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
         
-        vec4 koiCol = Koi(p,ro,style); // exact bounds
+        vec4 koiCol = Koi(koi); // exact bounds
 
         if(koiCol.a<0.) // if within koi use its color
         {
@@ -171,5 +176,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
         
     }
-        
 }
