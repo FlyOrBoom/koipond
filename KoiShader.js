@@ -35,7 +35,9 @@ const frag = `
     const float PI  = 3.14159;
     const float TAU = 6.28319;
     const float PHI = 1.61803;
-
+    const vec2 V = vec2(0,1);
+    const vec2 H = vec2(1,0);
+    
     // BEGIN Insert Koi.frag here
     // END
 

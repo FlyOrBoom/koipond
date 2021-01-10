@@ -22,7 +22,10 @@ class KoiPond {
                         })
         this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> (Math.random()*2-1))
     }
-    add (babies) {
+    add (babies,styles=[]) {
+        styles.forEach((style,index)=>{
+            this.kois[(this.population+index)*this.ATTRIBUTES_PER_KOI+3] = style
+        })
         this.population += babies
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }

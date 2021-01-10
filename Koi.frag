@@ -86,7 +86,7 @@ vec3 palette(float style)
     return vec3(.99,.72,.33); // gold
     
 }
-vec4 Koi(vec2 p,mat2 ro,float style)
+vec4 Koi(vec2 p,float style)
 {    
     vec3 col = palette(style);
 
@@ -98,10 +98,7 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     float tail = 0.10*R;
     float fins = 0.04*R;
     float eyes = 0.02*R;
-    const vec2 v = vec2(0,1);
-    const vec2 h = vec2(1,0);
 
-    p *= ro;
     float dx = sin(4.*(iTime+style)+p.y*4.);
     dx /= 8.;
     dx *= p.y;
@@ -110,13 +107,13 @@ vec4 Koi(vec2 p,mat2 ro,float style)
     d = sdEgg(p,r); // body
     
     d = smin(d,
-        sdCircle(p+r*v,r/2.),
+        sdCircle(p+r*V,r/2.),
         1.5*r); // head
     d = smin(d,
-        sdDroplet(p-(body+tail/2.)*v,tail),
+        sdDroplet(p-(body+tail/2.)*V,tail),
         2.1*r); // tail
     d = smin(d,
-        sdCircle(p-(cos(4.*iTime)/32.*h)-(body+tail*2.)*v,0.),
+        sdCircle(p-(cos(4.*iTime)/32.*H)-(body+tail*2.)*V,0.),
         1.3*r); //tail
 
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r));
@@ -165,15 +162,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec4 koi = kois[id];
         
         vec2 p = koi.xy;
-        mat2 ro = rot(koi.z);
         float style = koi.w;
      
         p += uv;
         p = mod(p-1.,2.)-1.; // tile
+        p *= rot(koi.z);
         
-        if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
-        
-        vec4 koiCol = Koi(p,ro,style); // exact bounds
+        if(length(vec2(p.x*2.,p.y*1.4-.1))>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
+        vec4 koiCol = Koi(p,style); // exact bounds
 
         if(koiCol.a<0.) // if within koi use its color
         {
