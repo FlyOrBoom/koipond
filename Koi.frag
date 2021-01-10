@@ -49,7 +49,7 @@ float sdFins(vec2 p, float r, float size)
     return smin(
         sdCircle(p-vec2(0,cos(4.*iTime+p.y*8.+side)/8.-r/8.)/4.,size/2.),
         sdCircle(p,size),
-        r
+        1.2*r
     );
 }
 vec3 palette(float style)
@@ -86,11 +86,8 @@ vec3 palette(float style)
     return vec3(.99,.72,.33); // gold
     
 }
-vec4 Koi(vec4 koi)
+vec4 Koi(vec2 p,mat2 ro,float style)
 {    
-    vec2 p = koi.xy*rot(koi.z);
-    float style = koi.w;
-
     vec3 col = palette(style);
 
     float d = 1.;
@@ -102,43 +99,49 @@ vec4 Koi(vec4 koi)
     float fins = 0.04*R;
     float eyes = 0.02*R;
     const vec2 v = vec2(0,1);
+    const vec2 h = vec2(1,0);
 
+    p *= ro;
     float dx = sin(4.*(iTime+style)+p.y*4.);
     dx /= 8.;
     dx *= p.y;
     p.x += dx;
 
     d = sdEgg(p,r); // body
-    d = smin(d,sdCircle(p+r*v,r/2.),1.5*r); // head
-    d = smin(d,sdDroplet(p-(body+tail/2.)*v,tail),2.1*r); // tail
     
-    for(float i = 0.; i<5.; i++){
-        vec2 q = p;
-        q.y += sin(iTime*PHI-(i+style)/PHI)*tail;
-        q.x += sin(iTime/PHI+(i+style)*PHI)*tail;
-        d = smin(d,sdCircle(q-(body+tail*2.)*v,0.3*r),0.5*r);
-    }
+    d = smin(d,
+        sdCircle(p+r*v,r/2.),
+        1.5*r); // head
+    d = smin(d,
+        sdDroplet(p-(body+tail/2.)*v,tail),
+        2.1*r); // tail
+    d = smin(d,
+        sdCircle(p-(cos(4.*iTime)/32.*h)-(body+tail*2.)*v,0.),
+        1.3*r); //tail
 
-    float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
+    float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r));
 
-    {
+    float f = sdFins(p,r,fins);
+
+    if(d<f){
         vec2 q = (p+fract(style))/MAX_KOI_SIZE;
         float t = 0.; // threshold
-        t = min(1.,(p.y-body*.9)*16.); // keep out of tail
-        t = max(t,min(1.,-d/r/16.)); // keep near edge
+        t = clamp(
+            (p.y-body*.9)*32.,
+            0.,
+            1. // keep out of tail
+        ); 
 
-        float s1 = gradient(q/1.);
-        float s2 = gradient(q/4.)*max(0.,s1+0.1);
-        if(s1>t)
+        float m1 = gradient(q);
+        float m2 = mod(m1*PI,1.)-.5;
+        if(m1>t)
             col = mix(col,palette(style+2.),.8);
-            
-        if(s2>t)
+        
+        if(m2>t)
             col = mix(col,palette(style-2.),.8);
         
         if(sdEyes<eyes) col = vec3(0);
     }
-
-    float f = sdFins(p,r,fins);
 
     d = min(d,f);
     d /= r;
@@ -161,19 +164,23 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         vec4 koi = kois[id];
         
-        koi.xy += uv;
+        vec2 p = koi.xy;
+        mat2 ro = rot(koi.z);
+        float style = koi.w;
      
-        koi.xy = mod(koi.xy-1.,2.)-1.; // tile
+        p += uv;
+        p = mod(p-1.,2.)-1.; // tile
         
-        if(length(koi.xy)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
+        if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
         
-        vec4 koiCol = Koi(koi); // exact bounds
+        vec4 koiCol = Koi(p,ro,style); // exact bounds
 
         if(koiCol.a<0.) // if within koi use its color
         {
-            fragColor = vec4(koiCol.rgb,1);
+            fragColor = vec4(koiCol.rgb,1.);
             return;
         }
         
     }
+        
 }

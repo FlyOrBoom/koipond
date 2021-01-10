@@ -26,18 +26,18 @@ class KoiPond {
         this.population += babies
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }
-    update (time) {
+    update (time, delta) {
         for (let i = 0; i < this.population; i++) {
 
             const ID = i*this.ATTRIBUTES_PER_KOI
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
             
-            const [n,dn] = this.noise(time*this.SPEED+style*100);
+            const n = this.noise(time*this.SPEED+style*100)*delta;
             
-            theta = n*Math.PI
+            theta += n*Math.PI*this.SPEED*32
 	    
-            const bimodal = this.normal(dn/100+1)+this.normal(dn/100-1) // Move fastest when rotating slightly
+            const bimodal = this.normal(n+1)+this.normal(n-1) // Move fastest when rotating slightly
             x -= Math.cos(theta+Math.PI/2)*this.SPEED*bimodal
             y += Math.sin(theta+Math.PI/2)*this.SPEED*bimodal
 
@@ -52,13 +52,12 @@ class KoiPond {
     normal = (a) => Math.exp(-a*a)
 
     noise(x){
-        let y = 0, dy = 0
+        let y = 0
         for(let i = 0; i<5; i+=0.5){
             const e = Math.exp(i)
             y += Math.sin(x*e)
-            dy += e*Math.cos(x*e)
         }
-        return [y,dy]
+        return y
     }
 
     set background(color){
