@@ -15,57 +15,82 @@ class KoiPond {
                         .map( (koiAttribute, index) => {
                             const r = Math.random()
                             switch( index%4 ){
-                                case 0: case 1: return r*2-1
+                                case 0: case 1: return r-0.5
                                 case 2: return r*2*Math.PI
                                 case 3: return r*10
                             }
                         })
-        this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> Math.random()*2-1 )
+        this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> (Math.random()*2-1))
     }
     add (babies) {
         this.population += babies
         this.population = Math.max(0,Math.min(this.population,this.MAX_POPULATION))
     }
-    update (time, delta) {
+    update (time) {
         for (let i = 0; i < this.population; i++) {
 
             const ID = i*this.ATTRIBUTES_PER_KOI
 	    
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
             
-            const [n,dn] = noise(time*this.SPEED+style*100);
+            const [n,dn] = this.noise(time*this.SPEED+style*100);
             
             theta = n*Math.PI
 	    
-            const bimodal = normal(dn/100+1)+normal(dn/100-1) // Move fastest when rotating slightly
+            const bimodal = this.normal(dn/100+1)+this.normal(dn/100-1) // Move fastest when rotating slightly
             x -= Math.cos(theta+Math.PI/2)*this.SPEED*bimodal
             y += Math.sin(theta+Math.PI/2)*this.SPEED*bimodal
 
-            this.kois[ID+0] = torus(x,1)
-            this.kois[ID+1] = torus(y,1)
-            this.kois[ID+2] = mod(theta,2*Math.PI)
+            this.kois[ID+0] = this.torus(x,1)
+            this.kois[ID+1] = this.torus(y,1)
+            this.kois[ID+2] = this.mod(theta,2*Math.PI)
             this.kois[ID+3] = style
         }
     }
-}
-function mod(a,b){
-    return a-b*Math.floor(a/b)
-}
-function torus(a,b){
-    return mod(a-b,2*b)-b
-}
-function normal(a){
-    return Math.exp(-a*a)
-}
-function noise(x){
-    let y = 0, dy = 0
-    for(let i = 0; i<5; i+=0.5){
-        const e = Math.exp(i)
-    	y += Math.sin(x*e)
-        dy += e*Math.cos(x*e)
+    mod = (a,b) => a-b*Math.floor(a/b)
+    torus = (a,b) => this.mod(a-b,2*b)-b
+    normal = (a) => Math.exp(-a*a)
+
+    noise(x){
+        let y = 0, dy = 0
+        for(let i = 0; i<5; i+=0.5){
+            const e = Math.exp(i)
+            y += Math.sin(x*e)
+            dy += e*Math.cos(x*e)
+        }
+        return [y,dy]
     }
-    return [y,dy]
+
+    set background(color){
+        document.body.style.background = color
+    }
 }
+class KoiOverlay {
+    constructor () {
+        this.overlay = document.querySelector('svg')
+        this.namespace = 'http://www.w3.org/2000/svg'
+    }
+    render () {
+        const ripple = document.createElementNS(this.namespace,'circle')
+        ripple.setAttribute('class','ripple')
+        ripple.setAttribute('cx',Math.random()-.5)
+        ripple.setAttribute('cy',Math.random()-.5)
+        this.overlay.append(ripple) 
+        setTimeout(()=>{ripple.remove()},5000)
+        setTimeout(()=>{this.render()},Math.random()*512)
+    }
+}"use strict"
+
+const canvas = document.querySelector("canvas")
+const svg = document.querySelector("svg")
+const debug = document.querySelector("div")
+const gl = canvas.getContext("webgl")
+const pond = new KoiPond()
+const overlay = new KoiOverlay()
+
+pond.background = "hsl(150deg,50%,80%)"
+
+overlay.render()
 const defaultShaderType = [
     'VERTEX_SHADER',
     'FRAGMENT_SHADER',
@@ -203,11 +228,8 @@ function resizeCanvasToDisplaySize(canvas, multiplier) {
     return false;
 }
 
-const canvas = document.querySelector("canvas")
+
 const timeSamples = Array(32)
-const debug = document.querySelector("div")
-const gl = canvas.getContext("webgl")
-const pond = new KoiPond()
 
 const gradient = gl.createTexture()
 const gradient_png = new Image()
@@ -218,14 +240,14 @@ gradient_png.onload = () => {
 }
 gradient_png.src = "gradient.png"
 
-const vertexShaderCode = `
+const vert = `
     attribute vec4 vPosition;
     void main() {
       gl_Position = vPosition;
     }
 `
 
-const fragmentShaderCode = `
+const frag = `
     precision mediump float;
 
     uniform vec2 iResolution;
@@ -239,10 +261,10 @@ const fragmentShaderCode = `
     const int MAX_POPULATION = ${pond.MAX_POPULATION};
     const float MAX_KOI_SIZE = ${pond.MAX_KOI_SIZE};
     const int SEED = ${pond.SEED};
-    const int RIPPLE_COUNT = ${pond.RIPPLE_COUNT};
 
-    const float PI = 3.14159;
+    const float PI  = 3.14159;
     const float TAU = 6.28319;
+    const float PHI = 1.61803;
 
     // BEGIN Insert Koi.frag here
 /* 
@@ -268,29 +290,9 @@ mat2 rot(float theta)
     return mat2(x,-y,y,x);
 }
 
-//-- HASH
-float hash(float p)
-{
-    p = fract(p * .1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
-}
-highp float hash(highp vec2 p)
-{
-    vec3 p3 = fract(vec3(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-}
-
 float gradient(vec2 p)
 {
-    return texture2D(gradientSampler,mod(p,1.)+.5).r-.5;
-}
-
-float skin(vec2 p)
-{
-    return gradient(p);
+    return texture2D(gradientSampler,p-.5).r-.5;
 }
 //-- DISTANCE FUNCTIONS
 float sdCircle( vec2 p, float r )
@@ -318,34 +320,6 @@ float sdFins(vec2 p, float r, float size)
         sdCircle(p,size),
         r
     );
-}
-float sdRipple(vec2 p)
-{
-    float s = 0.; // sum of heights
-    const float f = 32.; // frequency
-    const float r = 1.5;
-    float o = iTime*1.; // offset
-    
-    for (int i = 0; i<RIPPLE_COUNT; i++)
-    {
-        vec2 q = ripples[i];
-
-        float d = length(p-q);
-
-        if(d>r) continue;
-
-        float x = f*d*d/r-o;
-        float falloff = r-d;
-        float w = mod(x,1.)*falloff;        
-        
-        if(w<.5) continue;
-
-        float selective = floor(gradient(q+x)+.9);
-        float h = floor(w*selective+.5)*falloff;
-        s += h;
-    }
-    
-    return clamp(s,0.,1.);
 }
 vec3 palette(float style)
 {
@@ -381,48 +355,57 @@ vec3 palette(float style)
     return vec3(.99,.72,.33); // gold
     
 }
-vec4 Koi(vec2 p,mat2 ro,float style)
+vec4 Koi(vec4 koi)
 {    
+    vec2 p = koi.xy*rot(koi.z);
+    float style = koi.w;
+
     vec3 col = palette(style);
 
     float d = 1.;
-    bool shade = false;
 
-    const float r =    0.20*MAX_KOI_SIZE; // length of koi's semi-minor axis
-    const float body = 0.50*MAX_KOI_SIZE;
-    const float tail = 0.10*MAX_KOI_SIZE;
-    const float fins = 0.04*MAX_KOI_SIZE;
-    const float eyes = 0.02*MAX_KOI_SIZE;
+    float R = MAX_KOI_SIZE / (1.+fract(style)/4.);
+    float r =    0.20*R; // length of koi's semi-minor axis
+    float body = 0.50*R;
+    float tail = 0.10*R;
+    float fins = 0.04*R;
+    float eyes = 0.02*R;
     const vec2 v = vec2(0,1);
 
-    p *= ro;
     float dx = sin(4.*(iTime+style)+p.y*4.);
     dx /= 8.;
     dx *= p.y;
     p.x += dx;
 
     d = sdEgg(p,r); // body
-    d = smin(d,sdCircle(p+r*v,r/2.),1.5*r);
-    d = smin(d,sdDroplet(p-(body+tail/2.)*v,tail),2.1*r);
+    d = smin(d,sdCircle(p+r*v,r/2.),1.5*r); // head
+    d = smin(d,sdDroplet(p-(body+tail/2.)*v,tail),2.1*r); // tail
+    
+    for(float i = 0.; i<5.; i++){
+        vec2 q = p;
+        q.y += sin(iTime*PHI-(i+style)/PHI)*tail;
+        q.x += sin(iTime/PHI+(i+style)*PHI)*tail;
+        d = smin(d,sdCircle(q-(body+tail*2.)*v,0.3*r),0.5*r);
+    }
 
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r)-vec2(0.,0.));
 
-    if( d<0. ){
+    {
         vec2 q = (p+fract(style))/MAX_KOI_SIZE;
         float t = 0.; // threshold
         t = min(1.,(p.y-body*.9)*16.); // keep out of tail
         t = max(t,min(1.,-d/r/16.)); // keep near edge
 
-        float s1 = skin(4.*q-9.);
-        float s2 = skin(8.*q+9.)*max(0.,s1+0.1);
+        float s1 = gradient(q/1.);
+        float s2 = gradient(q/4.)*max(0.,s1+0.1);
         if(s1>t)
             col = mix(col,palette(style+2.),.8);
             
         if(s2>t)
             col = mix(col,palette(style-2.),.8);
+        
+        if(sdEyes<eyes) col = vec3(0);
     }
-    
-    if(sdEyes<eyes) col = vec3(0);
 
     float f = sdFins(p,r,fins);
 
@@ -439,37 +422,29 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     
-    vec3 col = vec3(.7,.9,.8); // background color
-                
+    fragColor = vec4(0);
+
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
         if(id==population) break;
 
         vec4 koi = kois[id];
         
-        vec2 p = koi.xy;
-        mat2 ro = rot(koi.z);
-        float style = koi.w;
+        koi.xy += uv;
      
-        p += uv;
-        p = mod(p-1.,2.)-1.; // tile
+        koi.xy = mod(koi.xy-1.,2.)-1.; // tile
         
-        if(length(p)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
+        if(length(koi.xy)>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
         
-        vec4 koiCol = Koi(p,ro,style); // exact bounds
+        vec4 koiCol = Koi(koi); // exact bounds
 
         if(koiCol.a<0.) // if within koi use its color
         {
-            col = koiCol.rgb;
-            break;
+            fragColor = vec4(koiCol.rgb,1);
+            return;
         }
         
     }
-        
-    col *= 1.+sdRipple(uv)/10.;
-                
-    fragColor = vec4(col,1);
-    
 }
     // END
 
@@ -479,7 +454,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 `
 
 // setup GLSL program
-const program = createProgramFromSources(gl, [vertexShaderCode, fragmentShaderCode])
+const program = createProgramFromSources(gl, [vert, frag])
 
 // look up where the vertex data needs to go.
 const handles = {
@@ -525,6 +500,11 @@ let then = 0
 let time = 0
 let running = false
 
+function prerender(){
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D,gradient)
+    gl.uniform1i(handles.gradientSampler,0)
+}
 function render(now) {
     now *= 0.001 // convert to seconds
     const delta = Math.min(now - then, 0.1)
@@ -546,10 +526,6 @@ function render(now) {
     gl.uniform1i(handles.population, pond.population)
     gl.uniform2fv(handles.ripples, pond.ripples)
 
-    gl.activeTexture(gl.TEXTURE0)
-    gl.bindTexture(gl.TEXTURE_2D,gradient)
-    gl.uniform1i(handles.gradientSampler,0)
-
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 
     if(running) requestAnimationFrame(render)
@@ -561,8 +537,10 @@ function stop () {
 function start () {
     if(running) return
     running = true
+    prerender()
     requestAnimationFrame(render)
 }
+
 start()
 
 function resize () {
