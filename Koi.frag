@@ -173,7 +173,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         if(koiCol.a<0.) // if within koi use its color
         {
-            fragColor = koiCol;
+            fragColor = vec4(koiCol.rgb,1.);
             return;
         }
         
