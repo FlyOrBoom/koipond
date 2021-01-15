@@ -52,6 +52,21 @@ float sdFins(vec2 p, float r, float size)
         1.2*r
     );
 }
+float sdTail(vec2 p)
+{      
+    float d = 1.;
+    for(float i = 0.; i<4.; i++){
+        float t = 3.*iTime;
+        vec2 q = vec2(
+            cos(0.9*t+i*PI/2.)/24.,
+            sin(1.1*t+i*PI/2.)/64.
+        );
+        d = min(d,
+            sdCircle(p-q,0.)
+        );
+    }
+    return d;
+}
 vec3 palette(float style)
 {
     float s = mod(style,10.);
@@ -88,7 +103,8 @@ vec3 palette(float style)
 }
 vec4 Koi(vec2 p,float style)
 {    
-    vec3 col = palette(style);
+    vec3 primary = palette(style);
+    vec3 col = vec3(0);
 
     float d = 1.;
 
@@ -110,38 +126,32 @@ vec4 Koi(vec2 p,float style)
         sdCircle(p+r*V,r/2.),
         1.5*r); // head
     d = smin(d,
-        sdDroplet(p-(body+tail/2.)*V,tail),
-        2.1*r); // tail
+        sdDroplet(p-body*V,tail),
+        1.8*r); // tail
     d = smin(d,
-        sdCircle(p-(cos(4.*iTime)/32.*H)-(body+tail*2.)*V,0.),
-        1.3*r); //tail
+        sdTail(p-(body+tail*1.5)*V),
+        1.4*r);
 
     float sdEyes = length(vec2(abs(p.x)-5.*eyes,p.y+1.2*r));
 
     float f = sdFins(p,r,fins);
 
-    if(d<f){
+    {
         vec2 q = (p+fract(style))/MAX_KOI_SIZE;
-        float t = 0.; // threshold
-        t = clamp(
-            (p.y-body*.9)*32.,
-            0.,
-            1. // keep out of tail
-        ); 
 
-        float m1 = gradient(q);
-        float m2 = mod(m1*PI,1.)-.5;
-        if(m1>t)
-            col = mix(col,palette(style+2.),.8);
+        float mask = gradient(q/2.);
+        mask /= 1e1;
         
-        if(m2>t)
-            col = mix(col,palette(style-2.),.8);
+        vec3 secondary = palette(style+2.);
+        
+        col = mix(primary,secondary,smoothstep(aa,-aa,mask));
+        col = mix(secondary,col,smoothstep(aa,-aa,(p.y-body*.5)/r/2e2));
+        col = mix(primary,col,smoothstep(aa,-aa,(d-f)/r/2e2));
         
         if(sdEyes<eyes) col = vec3(0);
     }
 
     d = min(d,f);
-    d /= r;
 
     col = clamp(col,0.,1.);
     
@@ -152,8 +162,7 @@ vec4 Koi(vec2 p,float style)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
-    
-    fragColor = vec4(0);
+    vec4 col = vec4(0);
 
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {
@@ -171,12 +180,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         if(length(vec2(p.x*2.,p.y*1.4-.1))>MAX_KOI_SIZE) continue; // skip to next koi if outside bounding circle
         vec4 koiCol = Koi(p,style); // exact bounds
 
-        if(koiCol.a<0.) // if within koi use its color
-        {
-            fragColor = vec4(koiCol.rgb,1.);
-            return;
-        }
-        
+        col = mix(col,vec4(koiCol.rgb,1.),smoothstep(aa,-aa,koiCol.a));        
     }
-        
+    fragColor = col;  
 }

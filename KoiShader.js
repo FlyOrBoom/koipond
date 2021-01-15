@@ -37,12 +37,14 @@ const frag = `
     const float PHI = 1.61803;
     const vec2 V = vec2(0,1);
     const vec2 H = vec2(1,0);
+
+    #define aa 3./iResolution.x
     
     // BEGIN Insert Koi.frag here
     // END
 
     void main() {
-      mainImage(gl_FragColor, gl_FragCoord.xy);
+       mainImage(gl_FragColor, gl_FragCoord.xy);
     }
 `
 

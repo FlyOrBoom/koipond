@@ -21,6 +21,19 @@ class KoiPond {
                             }
                         })
         this.ripples = new Float32Array(this.RIPPLE_COUNT*this.DIMENSIONS).map( _=> (Math.random()*2-1))
+
+        this.attractor = {
+            on: 0,
+            x: 0,
+            y: 0
+        }
+
+        window.addEventListener('mousedown',e=>{
+            const w = Math.min(innerWidth,innerHeight)
+            this.attractor.x = -(2*e.x-innerWidth)/w
+            this.attractor.y = +(2*e.y-innerHeight)/w
+            this.attractor.on = 1
+        })
     }
     add (babies,styles=[]) {
         styles.forEach((style,index)=>{
@@ -37,8 +50,18 @@ class KoiPond {
             var [x,y,theta,style] = this.kois.slice(ID,this.ATTRIBUTES_PE_KOI)
             
             const n = this.noise(time*this.SPEED+style*100)*delta;
+
+            const dt = this.mod((-Math.atan2(
+                    y-this.attractor.y,
+                    x-this.attractor.x
+            )-Math.PI/2)-theta+Math.PI,Math.PI*2)-Math.PI
+
+            //console.log(Math.round(theta/Math.PI*180),Math.round(dt/Math.PI*180))
             
-            theta += n*Math.PI*this.SPEED*32
+            theta += (this.attractor.on)*dt*this.SPEED*32
+            theta += (1-this.attractor.on)*n*Math.PI*this.SPEED*32
+
+            this.attractor.on = Math.max(0,this.attractor.on-delta/128)
 	    
             const bimodal = this.normal(n+1)+this.normal(n-1) // Move fastest when rotating slightly
             x -= Math.cos(theta+Math.PI/2)*this.SPEED*bimodal
@@ -46,7 +69,7 @@ class KoiPond {
 
             this.kois[ID+0] = this.torus(x,1)
             this.kois[ID+1] = this.torus(y,1)
-            this.kois[ID+2] = this.mod(theta,2*Math.PI)
+            this.kois[ID+2] = theta
             this.kois[ID+3] = style
         }
     }
