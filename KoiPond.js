@@ -59,7 +59,7 @@ class KoiPond {
             theta += (this.attractor.on)*dt*this.SPEED*32
             theta += (1-this.attractor.on)*n*Math.PI*this.SPEED*32
 
-            this.attractor.on = Math.max(0,this.attractor.on-delta/128)
+            this.attractor.on = Math.max(0,this.attractor.on-delta/16)
 	    
             const bimodal = this.normal(n+1)+this.normal(n-1) // Move fastest when rotating slightly
             x -= Math.cos(theta+Math.PI/2)*this.SPEED*bimodal
