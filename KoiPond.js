@@ -89,4 +89,8 @@ class KoiPond {
     set background(color){
         document.body.style.background = color
     }
+
+    set debug(state){
+        debug.style.display = state ? "block" : "none"
+    }
 }

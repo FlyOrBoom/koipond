@@ -8,6 +8,7 @@ const pond = new KoiPond()
 const overlay = new KoiOverlay()
 
 pond.background = "hsl(150deg,50%,80%)"
+pond.debug = false
 
 overlay.render()
 
