@@ -9,7 +9,7 @@ class KoiOverlay {
         ripple.setAttribute('cx',Math.random()-.5)
         ripple.setAttribute('cy',Math.random()-.5)
         this.overlay.append(ripple) 
-        setTimeout(()=>{ripple.remove()},5000)
+        setTimeout(()=>{ripple.remove()},2000)
         setTimeout(()=>{this.render()},Math.random()*512)
     }
 }

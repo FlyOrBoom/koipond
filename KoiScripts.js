@@ -55,8 +55,6 @@ class KoiPond {
                     y-this.attractor.y,
                     x-this.attractor.x
             )-Math.PI/2)-theta+Math.PI,Math.PI*2)-Math.PI
-
-            //console.log(Math.round(theta/Math.PI*180),Math.round(dt/Math.PI*180))
             
             theta += (this.attractor.on)*dt*this.SPEED*32
             theta += (1-this.attractor.on)*n*Math.PI*this.SPEED*32
@@ -105,14 +103,14 @@ class KoiOverlay {
         ripple.setAttribute('cx',Math.random()-.5)
         ripple.setAttribute('cy',Math.random()-.5)
         this.overlay.append(ripple) 
-        setTimeout(()=>{ripple.remove()},5000)
+        setTimeout(()=>{ripple.remove()},2000)
         setTimeout(()=>{this.render()},Math.random()*512)
     }
 }"use strict"
 
 const canvas = document.querySelector("canvas")
 const svg = document.querySelector("svg")
-const debug = document.querySelector("div")
+const debug = document.querySelector("#debug")
 const gl = canvas.getContext("webgl")
 const pond = new KoiPond()
 const overlay = new KoiOverlay()
@@ -306,6 +304,7 @@ const frag = `
     const vec2 H = vec2(1,0);
 
     #define aa 3./iResolution.x
+    #define clip
     
     // BEGIN Insert Koi.frag here
 /* 
@@ -473,6 +472,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0*fragCoord-iResolution.xy)/min(iResolution.x,iResolution.y); // normalize coordinates    
     vec4 col = vec4(0);
+
+    #ifdef clip
+    if(length(uv)>1.) return;
+    #endif
 
     for(int id=0; id<MAX_POPULATION; id++) // front to back
     {

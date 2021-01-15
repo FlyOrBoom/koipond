@@ -39,6 +39,7 @@ const frag = `
     const vec2 H = vec2(1,0);
 
     #define aa 3./iResolution.x
+    #define clip
     
     // BEGIN Insert Koi.frag here
     // END

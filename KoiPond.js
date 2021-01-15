@@ -55,8 +55,6 @@ class KoiPond {
                     y-this.attractor.y,
                     x-this.attractor.x
             )-Math.PI/2)-theta+Math.PI,Math.PI*2)-Math.PI
-
-            //console.log(Math.round(theta/Math.PI*180),Math.round(dt/Math.PI*180))
             
             theta += (this.attractor.on)*dt*this.SPEED*32
             theta += (1-this.attractor.on)*n*Math.PI*this.SPEED*32

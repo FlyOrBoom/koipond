@@ -16,13 +16,15 @@
               position: fixed;
               width: 100vmin;
               height: 100vmin;
+              clip-path: circle(49%);
             }
-            div{
+            #debug{
               position: fixed;
               top: 0;
               left: 0;
               color: white;
               background: black;
+              display: none;
             }
         </style>
     </head>
@@ -33,6 +35,8 @@
 circle{
   fill: transparent;
   stroke: white;
+}
+.ripple{
   animation: 2s expand ease-out;
 }
 @keyframes expand{
@@ -48,8 +52,9 @@ circle{
   }
 }
           </style>
+          <circle cx='.5' cy='.5' r='.5' stroke-width='.05' opacity='.2'/>
         </svg>
-        <div>? fps</div>
+        <div id='debug'>? fps</div>
     </body>
     <script src='KoiScripts.js'></script>
 </html>
