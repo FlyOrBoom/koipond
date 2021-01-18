@@ -125,6 +125,8 @@ window.addEventListener("mousedown",e=>{
     const y = e.y-innerHeight/2
     const theta = Math.atan2(y,x)/Math.PI*180
     pond.background = `hsl(${theta}deg,50%,80%)`
+    
+    if(e.which == 2) pond.add(1)
 })
 const defaultShaderType = [
     'VERTEX_SHADER',
