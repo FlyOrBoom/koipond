@@ -120,13 +120,16 @@ pond.debug = false
 
 overlay.render()
 
-window.addEventListener("mousedown",e=>{
+window.addEventListener("mousemove",e=>{
     const x = e.x-innerWidth/2
     const y = e.y-innerHeight/2
     const theta = Math.atan2(y,x)/Math.PI*180
     pond.background = `hsl(${theta}deg,50%,80%)`
-    
-    if(e.which == 2) pond.add(1)
+})
+
+window.addEventListener("mousedown",e=>{
+    pond.add(1)
+    e.preventDefault()
 })
 const defaultShaderType = [
     'VERTEX_SHADER',
