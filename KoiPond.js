@@ -28,7 +28,7 @@ class KoiPond {
             y: 0
         }
 
-        window.addEventListener('mousedown',e=>{
+        window.addEventListener('mousemove',e=>{
             const w = Math.min(innerWidth,innerHeight)
             this.attractor.x = -(2*e.x-innerWidth)/w
             this.attractor.y = +(2*e.y-innerHeight)/w
